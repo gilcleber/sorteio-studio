@@ -74,14 +74,12 @@ const RadioLogin = () => {
 
             console.log('Perfil encontrado:', profile)
 
-            // 2. Busca licença explicitamente (mais seguro que join com RLS público)
+            // 2. Busca licença explicitamente 
             const { data: license, error: licenseError } = await supabase
                 .from('licenses')
                 .select('*')
                 .eq('user_id', profile.id)
-                .maybeSingle() // Usa maybeSingle para não dar erro se não existir
-
-            console.log('Licença encontrada:', license, 'Erro:', licenseError)
+                .maybeSingle()
 
             if (licenseError) {
                 console.error('Erro ao buscar licença:', licenseError)
@@ -109,15 +107,13 @@ const RadioLogin = () => {
             }
 
             // 3. Login via Supabase Auth
-            // IMPORTANTE: A senha do usuário DEVE ser igual ao PIN
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            const { error: authError } = await supabase.auth.signInWithPassword({
                 email: profile.email,
                 password: pin
             })
 
             if (authError) {
                 console.error('Erro de autenticação (Auth):', authError)
-                // Se der erro de senha inválida, significa que a senha no Auth != PIN no banco
                 if (authError.message.includes('Invalid login credentials')) {
                     setError('Erro de credenciais. A senha do sistema pode estar diferente do PIN.')
                 } else {
@@ -127,8 +123,7 @@ const RadioLogin = () => {
                 return
             }
 
-            // Se PIN não foi alterado e não é admin, força troca
-            // Mas se for admin ou user normal com pin já alterado, vai pro dashboard
+            // Se PIN não foi alterado e não é admin...
             if (!profile.pin_changed) {
                 navigate('/trocar-pin', {
                     state: {
@@ -139,30 +134,32 @@ const RadioLogin = () => {
                     }
                 })
             } else {
-                // CORREÇÃO DE RACE CONDITION (LOOP):
-                // Aguarda um pequeno delay para garantir que o AuthProvider 
-                // recebeu o evento onAuthStateChange e atualizou o contexto.
-                // Sem isso, o PrivateRoute pode rodar antes do context ter o user, jogando de volta pro Login.
-                setLoading(true)
+                // CORREÇÃO ROBUSTA DE LOOP
+                // Verifica a sessão ativamente em loop antes de redirecionar
+                let attempts = 0
+                const checkSessionInterval = setInterval(async () => {
+                    attempts++
+                    const { data: { session: activeSession } } = await supabase.auth.getSession()
 
-                // Pequena espera de segurança
-                await new Promise(resolve => setTimeout(resolve, 500))
-
-                // Verifica se a sessão está realmente ativa no client antes de ir
-                const { data: { session: activeSession } } = await supabase.auth.getSession()
-
-                if (activeSession) {
-                    navigate('/')
-                } else {
-                    console.error("Sessão não detectada após login. Tentando novamente...")
-                    handleLogin() // Tenta recursivamente ou mostra erro
-                }
+                    if (activeSession) {
+                        clearInterval(checkSessionInterval)
+                        // Delay extra para propagação no Context
+                        setTimeout(() => {
+                            // Redirecionamento forçado para limpar estado
+                            window.location.href = '#/'
+                            window.location.reload()
+                        }, 500)
+                    } else if (attempts > 10) {
+                        clearInterval(checkSessionInterval)
+                        setError('Erro: Login demorou muito. Tente recarregar a página.')
+                        setLoading(false)
+                    }
+                }, 500)
             }
 
         } catch (err) {
             console.error('Erro inesperado no login:', err)
             setError('Erro inesperado. Tente novamente.')
-        } finally {
             setLoading(false)
         }
     }
