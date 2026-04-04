@@ -7,6 +7,7 @@ import { Trophy, Gift, ArrowRight, CheckCircle2 } from 'lucide-react'
 export default function PaginaParticipacao() {
     const { slug } = useParams()
     const [sorteio, setSorteio] = useState(null)
+    const [sorteioStatus, setSorteioStatus] = useState('loading') // loading, not_found, encerrado, ativo
     const [brinde, setBrinde] = useState(null)
     const [patrocinadores, setPatrocinadores] = useState([])
     const [configForm, setConfigForm] = useState(null)
@@ -23,9 +24,22 @@ export default function PaginaParticipacao() {
     useEffect(() => {
         const fetchData = async () => {
             // 1. Fetch Sorteio Config/Params na tabela Host (Historico)
-            const { data: sortData, error } = await supabase.from('app_historico').select('*').eq('slug', slug).single()
-            if (error || !sortData) { setLoading(false); return } 
+            const { data: sortData, error } = await supabase.from('app_historico').select('*').eq('slug', slug).maybeSingle()
+            if (error || !sortData) { 
+                setSorteioStatus('not_found')
+                setLoading(false); 
+                return 
+            } 
+            
             setSorteio(sortData)
+
+            if (sortData.data_ganho !== null) {
+                setSorteioStatus('encerrado')
+                setLoading(false)
+                return
+            }
+            
+            setSorteioStatus('ativo')
 
             // 2. Fetch Brinde Detail Extra Info (se aplicável na rodada)
             if (sortData.premio) {
@@ -78,7 +92,8 @@ export default function PaginaParticipacao() {
     }
 
     if (loading) return <div className="min-h-screen bg-gray-950 flex items-center justify-center font-mono text-purple-500 animate-pulse">Sincronizando Sorteio...</div>
-    if (!sorteio) return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-red-500 font-bold text-xl px-4 text-center">Inscrições Encerradas ou Link Inválido 🚫</div>
+    if (sorteioStatus === 'not_found') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-red-500 font-bold px-4 text-center"><Trophy className="w-16 h-16 mb-4 text-gray-800" /> Ops! Este Sorteio não foi encontrado ou o link é inválido. 🚫</div>
+    if (sorteioStatus === 'encerrado') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-yellow-500 font-bold px-4 text-center"><CheckCircle2 className="w-16 h-16 mb-4 text-yellow-600" /> Este Sorteio já foi encerrado e teve seu Ganhador sorteado! 🎉</div>
 
     const isSuccess = success
     
