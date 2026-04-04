@@ -132,13 +132,32 @@ const AdminPanel = () => {
         channelRef.current.postMessage({ type: isModoEspera ? 'STOP_IDLE' : 'START_IDLE' })
     }
 
-    // --- SORTEIO ---
+    // --- SORTEIO (AGORA SERVER-SIDE & COM UX AUMENTADA) ---
     const loopSorteio = (startTime) => {
+        // Giro visual provisório apenas para animação da roleta
         const randomIndex = Math.floor(Math.random() * participantes.length)
         const nomeSorteado = participantes[randomIndex].nome
 
         setNomeAtual(nomeSorteado)
         channelRef.current.postMessage({ type: 'UPDATE_NAME', payload: nomeSorteado })
+
+        // UX: Vibração Tátil (Haptic Feedback) via API do Navegador
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(50) // Pequeno pulso de 50ms simulando passar p/ próximo nome
+        }
+
+        // UX: Progresso e Tensão Dinâmica do Audio (Pitch Ascendente)
+        if (SOUNDS.drum && volume) {
+            const timeElapsed = Date.now() - startTime
+            const ratio = timeElapsed / (duracaoRef.current * 1000)
+            const newPitch = 1 + (ratio * 1.5) // Acelera o playback gradativamente até 2.5x
+
+            try {
+                SOUNDS.drum.playbackRate = newPitch > 2.5 ? 2.5 : newPitch
+            } catch (e) {
+                console.log("Ajuste de playbackRate não suportado pelo browser.", e)
+            }
+        }
 
         if (Date.now() - startTime > duracaoRef.current * 1000) {
             finalizarSorteio()
@@ -149,6 +168,9 @@ const AdminPanel = () => {
 
     const iniciarSorteio = () => {
         if (participantes.length === 0) return alert("Adicione participantes primeiro!")
+        
+        // Debounce Real-State: Impede clicks duplicadíssimos caso force a barra
+        if (isSorteando) return 
 
         setIsModoEspera(false)
         setIsSorteando(true)
@@ -158,6 +180,7 @@ const AdminPanel = () => {
         channelRef.current.postMessage({ type: 'START_ROLLING', prize: brindeAtual })
 
         if (volume) {
+            try { SOUNDS.drum.playbackRate = 1.0 } catch(e){} // Reseta pitch ao iniciar
             SOUNDS.drum.currentTime = 0
             SOUNDS.drum.play().catch(e => console.log("Erro som:", e))
         }
@@ -167,40 +190,50 @@ const AdminPanel = () => {
 
     const finalizarSorteio = async () => {
         clearTimeout(timeoutRef.current)
-        if (volume) {
-            SOUNDS.drum.pause()
-            SOUNDS.drum.currentTime = 0
-            SOUNDS.win.play().catch(e => console.log("Erro som:", e))
+        
+        // Mantém state ocupado para evitar conflitos até o servidor responder
+        setNomeAtual("Processando no Servidor...")
+
+        try {
+            // ---> MIGRAÇÃO: LOGICA MOVIDA PARA UMA RPC TOTALMENTE SEGURA NO SUPABASE
+            const { data: ganhadorFinal, error } = await supabase.rpc('executar_sorteio_seguro', {
+                p_user_id: user.id,
+                p_brinde: brindeAtual
+            })
+
+            if (error || !ganhadorFinal) {
+                console.error("Erro na Database Function:", error)
+                alert("Erro de segurança no sorteio (Servidor): " + (error?.message || "Desconhecido"))
+                
+                // Reseta estado local por haver falha de nuvem
+                setIsSorteando(false)
+                setNomeAtual("Erro!")
+                if (volume) SOUNDS.drum.pause()
+                return
+            }
+
+            if (volume) {
+                SOUNDS.drum.pause()
+                SOUNDS.drum.currentTime = 0
+                try { SOUNDS.drum.playbackRate = 1.0 } catch(e){} // Reseta pitch
+                SOUNDS.win.play().catch(e => console.log("Erro som vitória:", e))
+            }
+
+            setGanhador(ganhadorFinal)
+            setNomeAtual(ganhadorFinal.nome)
+            setIsSorteando(false)
+
+            // A transação do Supabase já inseriu, a gente só alimenta o Cache React local:
+            setHistorico([ganhadorFinal, ...historico])
+
+            channelRef.current.postMessage({ type: 'WINNER_SELECTED', payload: ganhadorFinal })
+            dispararConfete()
+
+        } catch (catastrophicError) {
+            console.error("Falha gravíssima ao contactar o BD:", catastrophicError)
+            setIsSorteando(false)
+            setNomeAtual("Tentativa Falhou")
         }
-
-        const indexGanhador = Math.floor(Math.random() * participantes.length)
-        const ganhadorFinal = {
-            ...participantes[indexGanhador],
-            dataHora: new Date().toISOString(),
-            premio: brindeAtual
-        }
-
-        setGanhador(ganhadorFinal)
-        setNomeAtual(ganhadorFinal.nome)
-        setIsSorteando(false)
-
-        // Salvar Histórico na Nuvem
-        const { error } = await supabase.from('app_historico').insert({
-            user_id: user.id,
-            nome: ganhadorFinal.nome,
-            telefone: ganhadorFinal.telefone,
-            premio: ganhadorFinal.premio,
-            detalhes: ganhadorFinal // Guarda objeto completo JSON
-        })
-
-        if (!error) {
-            setHistorico([ganhadorFinal, ...historico]) // Atualiza local
-        } else {
-            console.error("Erro ao salvar histórico:", error)
-        }
-
-        channelRef.current.postMessage({ type: 'WINNER_SELECTED', payload: ganhadorFinal })
-        dispararConfete()
     }
 
     const dispararConfete = () => confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } })
