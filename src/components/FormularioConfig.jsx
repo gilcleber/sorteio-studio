@@ -14,6 +14,7 @@ export default function FormularioConfig({ user }) {
   const [mensagemBase, setMensagemBase] = useState("Sua participação foi confirmada. Fique ligado ao vivo!")
   const [linkInsta, setLinkInsta] = useState("")
   const [linkSite, setLinkSite] = useState("")
+  const [corTema, setCorTema] = useState("#6b21a8")
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function FormularioConfig({ user }) {
               setMensagemBase(data.acao_pos_participacao.mensagem || "")
               setLinkInsta(data.acao_pos_participacao.instagram_url || "")
               setLinkSite(data.acao_pos_participacao.link_externo || "")
+              if (data.acao_pos_participacao.corTema) setCorTema(data.acao_pos_participacao.corTema)
           }
       }
   }
@@ -49,7 +51,7 @@ export default function FormularioConfig({ user }) {
           radio_id: user.id,
           evento_id: evData.id,
           campos,
-          acao_pos_participacao: { mensagem: mensagemBase, instagram_url: linkInsta, link_externo: linkSite }
+          acao_pos_participacao: { mensagem: mensagemBase, instagram_url: linkInsta, link_externo: linkSite, corTema }
       }
       
       const { data } = await supabase.from('app_formulario_config').select('id').eq('evento_id', evData.id).single()
@@ -124,6 +126,18 @@ export default function FormularioConfig({ user }) {
                     <label className="text-xs font-bold text-blue-500 uppercase block mb-1">Botão Site / Patrocinador</label>
                     <input value={linkSite} onChange={e=>setLinkSite(e.target.value)} type="url" className="w-full bg-black border border-gray-800 rounded-lg p-3 outline-none focus:border-blue-500 text-sm text-white" placeholder="https://..." />
                  </div>
+             </div>
+          </div>
+
+          <div className="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4 shadow-xl">
+             <h3 className="text-lg font-bold text-purple-400 mb-2">Identidade Visual</h3>
+             <p className="text-xs text-gray-500 mb-4">Escolha a cor predominante do topo da página do Sorteio para criar a sua marca.</p>
+             <div>
+                <label className="text-xs text-gray-400 uppercase block mb-2">Cor Primária (Header)</label>
+                <div className="flex gap-4 items-center">
+                    <input value={corTema} onChange={e=>setCorTema(e.target.value)} type="color" className="w-14 h-14 rounded-lg cursor-pointer bg-black border-2 border-gray-800 p-1" />
+                    <span className="text-sm font-mono text-gray-400 uppercase">{corTema}</span>
+                </div>
              </div>
           </div>
 
