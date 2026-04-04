@@ -319,22 +319,38 @@ const SuperAdmin = () => {
 
                                         {client.slug && (
                                             <div className="mt-2 space-y-2">
-                                                {/* Link de Acesso */}
-                                                <div className="flex items-center gap-2">
+                                                {/* Link de Acesso e Gestão */}
+                                                <div className="flex flex-wrap items-center gap-2">
                                                     <code className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-400 select-all">
-                                                        {window.location.origin}/sorteio-facil-web/#/radio/{client.slug}
+                                                        {window.location.origin}/#/participar/{client.slug}
                                                     </code>
                                                     <button
-                                                        onClick={() => {
-                                                            const link = `${window.location.origin}/sorteio-facil-web/#/radio/${client.slug}`
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.preventDefault(); e.stopPropagation();
+                                                            const link = `${window.location.origin}/#/participar/${client.slug}`
                                                             navigator.clipboard.writeText(link)
-                                                            alert('Link copiado!')
+                                                            const btn = e.currentTarget;
+                                                            const oldText = btn.innerHTML;
+                                                            btn.innerHTML = '✅ Copiado!';
+                                                            btn.classList.add('bg-green-600');
+                                                            setTimeout(() => { btn.innerHTML = oldText; btn.classList.remove('bg-green-600') }, 2000)
                                                         }}
-                                                        className="text-xs bg-purple-600 hover:bg-purple-500 px-2 py-1 rounded"
-                                                        title="Copiar link de acesso"
+                                                        className="text-xs bg-purple-600 hover:bg-purple-500 px-3 py-1.5 rounded transition-all"
+                                                        title="Copiar link do Sorteio"
                                                     >
                                                         Copiar Link
                                                     </button>
+                                                    
+                                                    <a
+                                                        href={`${window.location.origin}/#/radio/${client.slug}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded flex items-center gap-1 font-bold shadow-lg"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        Painel Gestor ↗
+                                                    </a>
                                                 </div>
                                                 {/* PIN de Acesso */}
                                                 {client.pin && (
@@ -343,11 +359,17 @@ const SuperAdmin = () => {
                                                             PIN: {client.pin}
                                                         </code>
                                                         <button
-                                                            onClick={() => {
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.preventDefault(); e.stopPropagation();
                                                                 navigator.clipboard.writeText(client.pin)
-                                                                alert('PIN copiado!')
+                                                                const btn = e.currentTarget;
+                                                                const oldText = btn.innerHTML;
+                                                                btn.innerHTML = '✅ Copiado!';
+                                                                btn.classList.add('bg-green-600');
+                                                                setTimeout(() => { btn.innerHTML = oldText; btn.classList.remove('bg-green-600') }, 2000)
                                                             }}
-                                                            className="text-xs bg-yellow-600 hover:bg-yellow-500 px-2 py-1 rounded text-white"
+                                                            className="text-xs bg-yellow-600 hover:bg-yellow-500 px-3 py-1.5 rounded text-white transition-all"
                                                             title="Copiar PIN"
                                                         >
                                                             Copiar PIN

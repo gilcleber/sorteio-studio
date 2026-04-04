@@ -14,6 +14,14 @@ export default function SorteioConfig({ user }) {
    const [brindes, setBrindes] = useState([])
    const [sorteioAtivo, setSorteioAtivo] = useState(null)
    const [loading, setLoading] = useState(false)
+   const [partCount, setPartCount] = useState(0)
+
+   useEffect(() => {
+       if (sorteioAtivo?.user_id) {
+           supabase.from('app_participantes').select('*', { count: 'exact', head: true }).eq('user_id', sorteioAtivo.user_id)
+           .then(({ count }) => { if (count !== null) setPartCount(count) })
+       }
+   }, [sorteioAtivo])
 
    useEffect(() => { if(user) carregaBasics() }, [user])
 
@@ -66,7 +74,13 @@ export default function SorteioConfig({ user }) {
            if (!error && data) setSorteioAtivo(data)
        }
        setLoading(false)
-       alert("Sorteio configurado. QRCode Gerado e Pronto pra captação!")
+       const btn = document.getElementById('btn-salvar-evento');
+       if (btn) {
+           const old = btn.innerHTML;
+           btn.innerHTML = '✅ Dados Salvos e Evento Pronto!';
+           btn.classList.add('bg-green-600');
+           setTimeout(() => { btn.innerHTML = old; btn.classList.remove('bg-green-600') }, 3500);
+       }
    }
 
    const baseURL = "https://sorteio-studio.vercel.app"
@@ -116,16 +130,54 @@ export default function SorteioConfig({ user }) {
                             </div>
                         </div>
 
-                        <button disabled={loading} onClick={salvarOuCriar} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 shadow-lg hover:-translate-y-0.5 transition-all mt-4"><Save className="w-5 h-5"/> SALVAR DADOS DO SORTEIO</button>
+                        <button id="btn-salvar-evento" disabled={loading} onClick={salvarOuCriar} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 shadow-lg hover:-translate-y-0.5 transition-all mt-4"><Save className="w-5 h-5"/> SALVAR DADOS DO SORTEIO</button>
                    </div>
 
                    {/* Lado Direito: QRCode Sharing e Public Link */}
                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-800 rounded-xl p-6 bg-black/50">
                        {sorteioAtivo?.slug ? (
-                           <div className="w-full">
-                               <QRCodeDisplay url={`${baseURL}/#/participar/${sorteioAtivo.slug}`} />
-                               <div className="mt-4 text-center">
-                                   <span className="bg-green-900/30 text-green-400 text-[10px] font-bold px-2 py-1 rounded inline-block">Sorteio Online Acoplado 🟢</span>
+                           <div className="w-full flex flex-col items-center gap-5 animate-in fade-in zoom-in duration-500">
+                               <h3 className="font-bold text-center text-gray-300 uppercase tracking-widest text-xs">Visão do Público / Escaneie</h3>
+                               
+                               <div className="bg-white p-3 rounded-xl shadow-[0_0_50px_rgba(255,255,255,0.1)]">
+                                   <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=000&bgcolor=fff&qzone=1&margin=0&data=${encodeURIComponent(`${baseURL}/#/participar/${sorteioAtivo.slug}`)}`} alt="QR Code do Sorteio" className="w-48 h-48" />
+                               </div>
+
+                               <div className="text-center w-full max-w-[280px]">
+                                   <div className="bg-gray-800 text-purple-300 text-[10px] break-all p-3 rounded-lg border border-gray-700 select-all mb-4 text-center font-mono">
+                                       {baseURL}/#/participar/{sorteioAtivo.slug}
+                                   </div>
+                                   
+                                   <div className="grid grid-cols-2 gap-3 mb-5">
+                                        <button 
+                                            onClick={(e) => {
+                                                navigator.clipboard.writeText(`${baseURL}/#/participar/${sorteioAtivo.slug}`);
+                                                const btn = e.currentTarget;
+                                                const oldText = btn.innerHTML;
+                                                btn.innerHTML = '✅ Copiado!';
+                                                btn.classList.add('bg-green-600', 'text-white');
+                                                btn.classList.remove('bg-indigo-600');
+                                                setTimeout(()=> { btn.innerHTML = oldText; btn.classList.remove('bg-green-600', 'text-white'); btn.classList.add('bg-indigo-600'); }, 2000)
+                                            }}
+                                            className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg shadow-lg transition-all"
+                                        >
+                                            Copiar Link
+                                        </button>
+                                        <a 
+                                            href={`https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(`${baseURL}/#/participar/${sorteioAtivo.slug}`)}`}
+                                            download="qrcode_sorteio"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2.5 px-3 rounded-lg text-center shadow-lg transition-all"
+                                        >
+                                            Baixar QR Code
+                                        </a>
+                                   </div>
+
+                                   <div className="bg-green-900/30 border border-green-500/30 p-2.5 rounded-xl flex items-center justify-center gap-3">
+                                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,1)]"></span>
+                                       <span className="text-green-400 text-xs font-black uppercase tracking-widest">{partCount} Participantes</span>
+                                   </div>
                                </div>
                            </div>
                        ) : (
@@ -133,7 +185,7 @@ export default function SorteioConfig({ user }) {
                                <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center mx-auto opacity-50">
                                    <RadioReceiver className="w-8 h-8 text-gray-600" />
                                </div>
-                               <p className="text-sm text-gray-500 font-medium">Configure os parâmetros à esquerda e Salve para habilitar o painel público e gerar o QR Code.</p>
+                               <p className="text-sm text-gray-500 font-medium">Salve as configurações à esquerda para gerar o Link e o QR Code de participação.</p>
                            </div>
                        )}
                    </div>

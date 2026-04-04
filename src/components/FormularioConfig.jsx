@@ -47,7 +47,13 @@ export default function FormularioConfig({ user }) {
           await supabase.from('app_formulario_config').insert(payload)
       }
       setLoading(false)
-      alert("Configurações do link público salvas com sucesso!")
+      const btn = document.getElementById('btn-salvar-form');
+      if (btn) {
+          const old = btn.innerHTML;
+          btn.innerHTML = '✅ Formulário salvo no Supabase!';
+          btn.classList.add('bg-green-600');
+          setTimeout(() => { btn.innerHTML = old; btn.classList.remove('bg-green-600') }, 3000);
+      }
   }
 
   const addCustomCampo = () => {
@@ -100,7 +106,7 @@ export default function FormularioConfig({ user }) {
              </div>
           </div>
 
-          <button disabled={loading} onClick={salvar} className="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 shadow-lg shadow-green-900/20 active:scale-95 transition-all"><Save className="w-5 h-5"/> SALVAR REGRAS DO BOTÃO E FORMULÁRIO</button>
+          <button id="btn-salvar-form" disabled={loading} onClick={salvar} className="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 shadow-lg shadow-green-900/20 active:scale-95 transition-all"><Save className="w-5 h-5"/> SALVAR REGRAS DO BOTÃO E FORMULÁRIO</button>
       </div>
   )
 }
