@@ -58,11 +58,11 @@ export default function PaginaParticipacao() {
             evento_id: sorteio.id,
             nome: formData.nome,
             telefone: formData.telefone,
-            cidade: formData.cidade,
-            cpf: formData.cpf || null,
-            email: formData.email || null,
-            instagram: formData.instagram || null
+            cidade: formData.cidade
         }
+        if (formData.cpf && formData.cpf.trim() !== '') payload.cpf = formData.cpf;
+        if (formData.email && formData.email.trim() !== '') payload.email = formData.email;
+        if (formData.instagram && formData.instagram.trim() !== '') payload.instagram = formData.instagram;
 
         const { error } = await supabase.from('app_participantes').insert(payload)
 
@@ -75,7 +75,7 @@ export default function PaginaParticipacao() {
                 origin: { y: 0.6 }
             })
         } else {
-            console.error("ERRO SUPABASE AO INSERIR:", error)
+            console.error("ERRO DETALHADO:", error?.message, error?.details)
             alert("Erro ao enviar inscrição. Pode ser um erro de segurança ou falha de conexão. Tente novamente.")
         }
     }
