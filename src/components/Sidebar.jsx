@@ -107,8 +107,8 @@ const Sidebar = () => {
                         )}
                     </div>
                     <div>
-                        <h1 className="text-white font-bold text-lg line-clamp-1" title={radioName || 'Sorteio Fácil'}>
-                            {radioName || 'Sorteio Fácil'}
+                        <h1 className="text-white font-bold text-lg line-clamp-1" title={radioName || 'Sorteio Studio'}>
+                            {radioName || 'Sorteio Studio'}
                         </h1>
                         <p className="text-gray-400 text-xs">{theme.slogan || 'Gestão de Sorteios'}</p>
                     </div>

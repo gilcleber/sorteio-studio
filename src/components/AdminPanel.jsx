@@ -357,7 +357,7 @@ const AdminPanel = () => {
                 <div className="flex items-center gap-4">
                     <div className="bg-purple-600/20 p-2 rounded-lg"><Cloud className="w-6 h-6 text-purple-400" /></div>
                     <div>
-                        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Sorteio Facil PRO <span className="text-[10px] bg-green-500 text-black px-2 rounded-full font-bold ml-2">CLOUD</span></h1>
+                        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Sorteio Studio <span className="text-[10px] bg-green-500 text-black px-2 rounded-full font-bold ml-2">PRO</span></h1>
                         <p className="text-xs text-gray-500 flex gap-2 items-center">
                             {loadingData ? "Sincronizando..." : `${participantes.length} Participantes • ${historico.length} Ganhadores`}
                         </p>

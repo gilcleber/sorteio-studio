@@ -342,15 +342,17 @@ const SuperAdmin = () => {
                                                         Copiar Link
                                                     </button>
                                                     
-                                                    <a
-                                                        href={`${window.location.origin}/#/radio/${client.slug}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
+                                                    <button
+                                                        type="button"
                                                         className="text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded flex items-center gap-1 font-bold shadow-lg"
-                                                        onClick={(e) => e.stopPropagation()}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            window.open(`${window.location.origin}/#/radio/${client.slug}`, '_blank')
+                                                        }}
                                                     >
                                                         Painel Gestor ↗
-                                                    </a>
+                                                    </button>
                                                 </div>
                                                 {/* PIN de Acesso */}
                                                 {client.pin && (

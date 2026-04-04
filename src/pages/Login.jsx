@@ -57,7 +57,7 @@ const Login = () => {
                     <div className="bg-purple-900/30 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30 shadow-lg shadow-purple-900/20">
                         <Trophy className="w-10 h-10 text-purple-400" />
                     </div>
-                    <h1 className="text-3xl font-black text-white">Sorteio Fácil PRO</h1>
+                    <h1 className="text-3xl font-black text-white">Sorteio Studio</h1>
                     <p className="text-gray-400 mt-2 text-sm">{showAdmin ? 'Acesso Administrativo' : 'Área do Cliente'}</p>
                 </div>
 

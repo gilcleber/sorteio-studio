@@ -57,21 +57,22 @@ export default function SorteioConfig({ user }) {
        // Gera slug baseada no titulo com random hash no final pra unicidade
        const baseSlug = titulo.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random()*10000)
        
+       const novoSlug = sorteioAtivo?.slug || baseSlug;
        const payload = {
            user_id: user.id,
-           slug: sorteioAtivo?.slug || baseSlug,
+           slug: novoSlug,
            premio: premioSel,
            data_sorteio: dataSorteio ? new Date(dataSorteio).toISOString() : null,
            tipo,
            qtd_ganhadores: qtd
        }
+       
+       setSorteioAtivo(prev => ({ ...prev, ...payload }));
 
        if (sorteioAtivo) {
-           const { data } = await supabase.from('app_historico').update(payload).eq('id', sorteioAtivo.id).select().single()
-           if (data) setSorteioAtivo(data)
+           await supabase.from('app_historico').update(payload).eq('id', sorteioAtivo.id)
        } else {
-           const { data, error } = await supabase.from('app_historico').insert(payload).select().single()
-           if (!error && data) setSorteioAtivo(data)
+           await supabase.from('app_historico').insert(payload)
        }
        setLoading(false)
        const btn = document.getElementById('btn-salvar-evento');
@@ -140,7 +141,7 @@ export default function SorteioConfig({ user }) {
                                <h3 className="font-bold text-center text-gray-300 uppercase tracking-widest text-xs">Visão do Público / Escaneie</h3>
                                
                                <div className="bg-white p-3 rounded-xl shadow-[0_0_50px_rgba(255,255,255,0.1)]">
-                                   <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=000&bgcolor=fff&qzone=1&margin=0&data=${encodeURIComponent(`${baseURL}/#/participar/${sorteioAtivo.slug}`)}`} alt="QR Code do Sorteio" className="w-48 h-48" />
+                                   <img src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://sorteio-studio.vercel.app/#/participar/${sorteioAtivo.slug}`)}`} alt="QR Code do Sorteio" className="w-48 h-48" />
                                </div>
 
                                <div className="text-center w-full max-w-[280px]">

@@ -46,7 +46,7 @@ const PublicDisplay = () => {
                 case 'RESET':
                     setGanhador(null)
                     setIsSorteando(false)
-                    setNomeAtual("Sorteio Fácil")
+                    setNomeAtual("Sorteio Studio")
                     break
                 default:
                     break
