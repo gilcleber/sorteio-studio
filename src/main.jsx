@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
+console.log("APP START - BROWSER ENGINE INITIALIZED");
+
 // --- DEBUG SAFETY NET (PATCH PARA ERRO removeChild) ---
 // Sobrescreve removeChild para evitar crash por conflito de DOM (comum em React + Extensões/Electron)
 const originalRemoveChild = Node.prototype.removeChild;
@@ -14,9 +16,10 @@ Node.prototype.removeChild = function (child) {
   return originalRemoveChild.apply(this, arguments);
 };
 
-// Captura erros globais (mas ignora o que já tratamos acima)
+// Captura erros globais pesados que explodem o hydration do React
 window.onerror = function (msg, url, line, col, error) {
-  if (msg.includes('removeChild') || msg.includes('ResizeObserver')) return true;
+  console.error("ERRO GLOBAL FATAL:", msg, url, line, error);
+  if (typeof msg === 'string' && (msg.includes('removeChild') || msg.includes('ResizeObserver'))) return true;
   // Opcional: Mostrar outros erros na tela se desejar, ou deixar pro console
   return false;
 };

@@ -1,30 +1,13 @@
-
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-let supabaseInstance;
+console.log("SUPABASE SETUP", import.meta.env);
+console.log("SUPABASE INIT:", { supabaseUrl, authStatus: supabaseKey ? "Present" : "Missing" });
 
 if (!supabaseUrl || !supabaseKey) {
-    console.error("⚠️ ERRO CRÍTICO: Chaves do Supabase não encontradas! Verifique o arquivo .env")
-    // Cliente Mock para não travar a aplicação (White Screen)
-    supabaseInstance = {
-        auth: {
-            getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
-            signInWithPassword: () => Promise.resolve({ error: { message: "ERRO DE CONFIGURAÇÃO: Chaves do Supabase ausentes no .env." } }),
-            signUp: () => Promise.resolve({ error: { message: "ERRO: Backend desconectado." } }),
-            signOut: () => Promise.resolve()
-        },
-        from: () => ({
-            select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
-            insert: () => Promise.resolve({ error: { message: "Backend desconectado" } }),
-            update: () => Promise.resolve({ error: { message: "Backend desconectado" } }),
-        })
-    }
-} else {
-    supabaseInstance = createClient(supabaseUrl, supabaseKey)
+  console.error("URGENTE: ENV NÃO CARREGADA NO VITE PAYLOAD", { supabaseUrl, supabaseKey });
 }
 
-export const supabase = supabaseInstance
+export const supabase = createClient(supabaseUrl || "https://dummy.supabase.co", supabaseKey || "dummy_key");

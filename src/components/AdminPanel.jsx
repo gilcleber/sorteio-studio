@@ -343,6 +343,9 @@ const AdminPanel = () => {
     // --- RENDERIZADORES ---
     const abrirDetalhes = (g) => { setGanhadorSelecionado(g); setIsModalOpen(true) }
 
+    // BLINDAGEM DE RENDER: Impede Runtime Crash por Variáveis indefinidas antes do React Hydration
+    if (!participantes) return <div className="p-10 text-white font-mono text-center">Carregando painel de sorteios...</div>;
+
     return (
         <div className="min-h-screen bg-gray-950 text-white p-4 md:p-6 font-sans flex flex-col gap-4">
 
@@ -547,22 +550,22 @@ const AdminPanel = () => {
                         {/* ABA Lista Completa (Participantes) */}
                         {abaAtiva === 'participantes' && (
                             <div className="space-y-2">
-                                <div className="text-center text-xs text-gray-500 mb-4">{participantes.length} participantes sincronizados</div>
-                                {participantes.slice(0, 100).map((p, i) => (
+                                <div className="text-center text-xs text-gray-500 mb-4">{participantes?.length || 0} participantes sincronizados</div>
+                                {participantes?.slice(0, 100).map((p, i) => (
                                     <div key={i} onClick={() => abrirDetalhes(p)} className="text-xs text-gray-400 border-b border-gray-800 py-2 flex justify-between hover:bg-gray-800/50 cursor-pointer px-2 rounded transition-colors group">
                                         <span className="group-hover:text-white transition-colors">{p.nome}</span>
                                         <span className="font-mono text-gray-600 group-hover:text-gray-400">{p.telefone ? p.telefone.slice(-4) : '***'}</span>
                                     </div>
                                 ))}
-                                {participantes.length > 100 && <p className="text-center text-[10px] text-gray-600 mt-2">... e mais {participantes.length - 100}. Use a busca (em breve).</p>}
+                                {(participantes?.length || 0) > 100 && <p className="text-center text-[10px] text-gray-600 mt-2">... e mais {(participantes?.length || 0) - 100}. Use a busca (em breve).</p>}
                             </div>
                         )}
 
                         {/* ABA HISTÓRICO */}
                         {abaAtiva === 'historico' && (
                             <div className="space-y-3">
-                                {historico.length === 0 && <div className="text-center text-gray-600 mt-10">Nenhum ganhador ainda.</div>}
-                                {historico.map((h, i) => (
+                                {(!historico || historico?.length === 0) && <div className="text-center text-gray-600 mt-10">Nenhum ganhador ainda.</div>}
+                                {historico?.map((h, i) => (
                                     <div key={i} onClick={() => abrirDetalhes(h)} className="bg-gradient-to-r from-gray-900 to-gray-800 p-3 rounded-lg border border-gray-700 hover:border-yellow-500/50 cursor-pointer group transition-all relative">
                                         <div className="flex justify-between items-start">
                                             <span className="text-[10px] font-bold text-yellow-600 uppercase bg-yellow-900/10 px-1 rounded">#{historico.length - i}</span>
