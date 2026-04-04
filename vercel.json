@@ -15,7 +15,7 @@
       "dest": "/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "^(?!/assets/|.*\\.(js|css|png|jpg|jpeg|svg|ico|json|woff2?|ttf|eot)).*$",
       "dest": "/"
     }
   ]
