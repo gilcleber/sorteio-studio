@@ -251,16 +251,24 @@ export default function PaginaParticipacao() {
                     <div className="bg-gray-100/80 px-6 py-5 border-t border-gray-200">
                         <p className="text-[9px] uppercase font-black tracking-[0.2em] text-gray-400 text-center mb-4">Apoio / Patrocínio</p>
                         <div className="flex flex-wrap gap-3 items-center justify-center">
-                            {patrocinadores.map(p => (
-                                <a key={p.id} href={p.link || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 bg-white rounded-2xl p-2 pr-4 shadow-sm border border-gray-200 hover:scale-[1.02] hover:border-gray-300 hover:shadow-md transition-all">
-                                    {p.logo_url ? (
-                                        <img src={p.logo_url} className="h-8 w-8 rounded-xl object-cover bg-gray-50 p-0.5" alt={p.nome} />
-                                    ) : (
-                                        <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-baseline justify-center"><span className="text-gray-400 text-xs font-bold mt-2">🏢</span></div>
-                                    )}
-                                    <span className="text-[11px] font-black tracking-wide text-gray-600 whitespace-nowrap">{p.nome}</span>
-                                </a>
-                            ))}
+                            {patrocinadores.map(p => {
+                                const content = (
+                                    <>
+                                        {p.logo_url && <img src={p.logo_url} className="h-8 w-8 rounded-xl object-cover bg-gray-50 p-0.5" alt={p.nome} />}
+                                        <span className={`text-[11px] font-black tracking-wide text-gray-600 whitespace-nowrap ${!p.logo_url ? 'px-2' : ''}`}>{p.nome}</span>
+                                    </>
+                                )
+                                const cls = "flex items-center gap-2.5 bg-white rounded-2xl p-2 pr-4 shadow-sm border border-gray-200 hover:scale-[1.02] hover:border-gray-300 hover:shadow-md transition-all"
+                                return p.link ? (
+                                    <a key={p.id} href={p.link} target="_blank" rel="noreferrer" className={cls}>
+                                        {content}
+                                    </a>
+                                ) : (
+                                    <div key={p.id} className={cls}>
+                                        {content}
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
                 )}

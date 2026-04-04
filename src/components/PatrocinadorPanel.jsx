@@ -19,7 +19,11 @@ export default function PatrocinadorPanel({ sorteioId }) {
 
   const adicionar = async () => {
       if (!nome) return alert("O Nome ou Marca do patrocinador é obrigatório!")
-      const { error } = await supabase.from('app_patrocinadores').insert({ evento_id: sorteioId, nome, logo_url: logo, link })
+      const payload = { evento_id: sorteioId, nome };
+      if (logo) payload.logo_url = logo;
+      if (link) payload.link = link;
+
+      const { error } = await supabase.from('app_patrocinadores').insert(payload)
       if (!error) { 
           carregar(); setNome(""); setLogo(""); setLink("") 
       } else {
