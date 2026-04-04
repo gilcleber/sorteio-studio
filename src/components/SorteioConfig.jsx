@@ -69,12 +69,22 @@ export default function SorteioConfig({ user }) {
        
        setSorteioAtivo(prev => ({ ...prev, ...payload }));
 
+       let dbError = null;
        if (sorteioAtivo) {
-           await supabase.from('app_historico').update(payload).eq('id', sorteioAtivo.id)
+           const { error } = await supabase.from('app_historico').update(payload).eq('id', sorteioAtivo.id)
+           dbError = error;
        } else {
-           await supabase.from('app_historico').insert(payload)
+           const { error } = await supabase.from('app_historico').insert(payload)
+           dbError = error;
        }
+       
        setLoading(false)
+       
+       if (dbError) {
+           alert("Bloqueio de Servidor: Suas edições não puderam ser salvas no Banco de Dados. Entre em contato com o suporte. Detalhe: " + dbError.message);
+           return;
+       }
+
        const btn = document.getElementById('btn-salvar-evento');
        if (btn) {
            const old = btn.innerHTML;

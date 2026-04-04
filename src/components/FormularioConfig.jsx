@@ -41,12 +41,21 @@ export default function FormularioConfig({ user }) {
       }
       
       const { data } = await supabase.from('app_formulario_config').select('id').eq('radio_id', user.id).single()
+      let dbError = null;
       if (data) {
-          await supabase.from('app_formulario_config').update(payload).eq('radio_id', user.id)
+          const { error } = await supabase.from('app_formulario_config').update(payload).eq('radio_id', user.id)
+          dbError = error;
       } else {
-          await supabase.from('app_formulario_config').insert(payload)
+          const { error } = await supabase.from('app_formulario_config').insert(payload)
+          dbError = error;
       }
       setLoading(false)
+
+      if (dbError) {
+          alert("Erro de permissão no Banco (RLS): " + dbError.message);
+          return;
+      }
+
       const btn = document.getElementById('btn-salvar-form');
       if (btn) {
           const old = btn.innerHTML;
