@@ -54,23 +54,17 @@ export default function PaginaParticipacao() {
         e.preventDefault()
         setEnviando(true)
 
-        const detalhes = {
-             origem: 'qrcode_web',
-             sorteio_slug: slug,
-             instagram: formData.instagram,
-             email: formData.email,
-             ...customFields
-        }
-
-        const { error } = await supabase.from('app_participantes').insert({
+        const payload = {
             evento_id: sorteio.id,
             nome: formData.nome,
             telefone: formData.telefone,
-            cpf: formData.cpf,
-            email: formData.email,
             cidade: formData.cidade,
-            detalhes
-        })
+            cpf: formData.cpf || null,
+            email: formData.email || null,
+            instagram: formData.instagram || null
+        }
+
+        const { error } = await supabase.from('app_participantes').insert(payload)
 
         setEnviando(false)
         if (!error) {
@@ -81,6 +75,7 @@ export default function PaginaParticipacao() {
                 origin: { y: 0.6 }
             })
         } else {
+            console.error("ERRO SUPABASE AO INSERIR:", error)
             alert("Erro ao enviar inscrição. Pode ser um erro de segurança ou falha de conexão. Tente novamente.")
         }
     }
@@ -248,17 +243,21 @@ export default function PaginaParticipacao() {
 
                 {/* RODAPÉ DE PATROCÍNIO (APOIO) */}
                 {patrocinadores.length > 0 && (
-                    <div className="bg-gray-100/80 px-6 py-5 border-t border-gray-200">
-                        <p className="text-[9px] uppercase font-black tracking-[0.2em] text-gray-400 text-center mb-4">Apoio / Patrocínio</p>
-                        <div className="flex flex-wrap gap-3 items-center justify-center">
+                    <div className="bg-gray-100/80 px-6 py-6 border-t border-gray-200">
+                        <p className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-400 text-center mb-6">Apoio e Patrocínio</p>
+                        <div className="flex flex-wrap gap-4 items-stretch justify-center">
                             {patrocinadores.map(p => {
                                 const content = (
-                                    <>
-                                        {p.logo_url && <img src={p.logo_url} className="h-8 w-8 rounded-xl object-cover bg-gray-50 p-0.5" alt={p.nome} />}
-                                        <span className={`text-[11px] font-black tracking-wide text-gray-600 whitespace-nowrap ${!p.logo_url ? 'px-2' : ''}`}>{p.nome}</span>
-                                    </>
+                                    <div className="flex flex-col items-center justify-center gap-3">
+                                        {p.logo_url ? (
+                                            <img src={p.logo_url} className="h-20 w-auto object-contain rounded-xl" alt={p.nome} />
+                                        ) : (
+                                            <div className="h-16 w-16 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-200"><span className="text-gray-300 text-3xl font-bold">🏢</span></div>
+                                        )}
+                                        <span className="text-[12px] font-black tracking-wide text-gray-600 text-center uppercase">{p.nome}</span>
+                                    </div>
                                 )
-                                const cls = "flex items-center gap-2.5 bg-white rounded-2xl p-2 pr-4 shadow-sm border border-gray-200 hover:scale-[1.02] hover:border-gray-300 hover:shadow-md transition-all"
+                                const cls = "flex items-center justify-center bg-white rounded-[2rem] p-5 shadow-sm border border-gray-200 hover:scale-[1.02] hover:border-gray-300 hover:shadow-md transition-all flex-1 min-w-[140px] max-w-[200px]"
                                 return p.link ? (
                                     <a key={p.id} href={p.link} target="_blank" rel="noreferrer" className={cls}>
                                         {content}
