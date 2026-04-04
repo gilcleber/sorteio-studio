@@ -39,7 +39,7 @@ export default function PaginaParticipacao() {
                 if (brindeData) setBrinde(brindeData)
             }
 
-            const { data: patData } = await supabase.from('app_patrocinadores').select('*').eq('sorteio_id', sortData.id)
+            const { data: patData } = await supabase.from('app_patrocinadores').select('*').eq('evento_id', sortData.id)
             if (patData) setPatrocinadores(patData)
 
             const { data: cfgData } = await supabase.from('app_formulario_config').select('*').eq('evento_id', sortData.id).single()
@@ -129,18 +129,6 @@ export default function PaginaParticipacao() {
                         <Trophy className="w-16 h-16 text-yellow-300 drop-shadow-xl mb-4" />
                         <h1 className="text-white font-black text-3xl drop-shadow-md leading-tight mt-2">{sorteio.titulo || "Sorteio Oficial"}</h1>
                         <span className="inline-block mt-3 bg-white/20 text-white text-[10px] px-3 py-1 rounded-full font-bold backdrop-blur-md uppercase tracking-wider">Válido para hoje</span>
-                    </div>
-                )}
-
-                {patrocinadores.length > 0 && (
-                    <div className="bg-gray-50 px-6 py-3.5 flex gap-4 items-center overflow-x-auto border-b border-gray-100 hide-scrollbar shrink-0">
-                        <span className="text-[10px] uppercase font-bold text-gray-400 whitespace-nowrap">Apoio:</span>
-                        {patrocinadores.map(p => (
-                            <a key={p.id} href={p.link || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-2 bg-white rounded-xl p-1.5 pr-3 shadow-sm border border-gray-200 hover:border-gray-300 transition-colors">
-                                {p.logo_url && <img src={p.logo_url} className="h-6 w-6 rounded-lg object-cover" alt={p.nome} />}
-                                <span className="text-xs font-bold text-gray-700 whitespace-nowrap">{p.nome}</span>
-                            </a>
-                        ))}
                     </div>
                 )}
 
@@ -257,6 +245,25 @@ export default function PaginaParticipacao() {
                         </form>
                     )}
                 </div>
+
+                {/* RODAPÉ DE PATROCÍNIO (APOIO) */}
+                {patrocinadores.length > 0 && (
+                    <div className="bg-gray-100/80 px-6 py-5 border-t border-gray-200">
+                        <p className="text-[9px] uppercase font-black tracking-[0.2em] text-gray-400 text-center mb-4">Apoio / Patrocínio</p>
+                        <div className="flex flex-wrap gap-3 items-center justify-center">
+                            {patrocinadores.map(p => (
+                                <a key={p.id} href={p.link || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 bg-white rounded-2xl p-2 pr-4 shadow-sm border border-gray-200 hover:scale-[1.02] hover:border-gray-300 hover:shadow-md transition-all">
+                                    {p.logo_url ? (
+                                        <img src={p.logo_url} className="h-8 w-8 rounded-xl object-cover bg-gray-50 p-0.5" alt={p.nome} />
+                                    ) : (
+                                        <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-baseline justify-center"><span className="text-gray-400 text-xs font-bold mt-2">🏢</span></div>
+                                    )}
+                                    <span className="text-[11px] font-black tracking-wide text-gray-600 whitespace-nowrap">{p.nome}</span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </motion.div>
         </div>
     )

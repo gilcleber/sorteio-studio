@@ -13,14 +13,18 @@ export default function PatrocinadorPanel({ sorteioId }) {
   }, [sorteioId])
 
   const carregar = async () => {
-      const { data } = await supabase.from('app_patrocinadores').select('*').eq('sorteio_id', sorteioId)
+      const { data } = await supabase.from('app_patrocinadores').select('*').eq('evento_id', sorteioId)
       if (data) setPatrocinadores(data)
   }
 
   const adicionar = async () => {
       if (!nome) return alert("O Nome ou Marca do patrocinador é obrigatório!")
-      const { error } = await supabase.from('app_patrocinadores').insert({ sorteio_id: sorteioId, nome, logo_url: logo, link })
-      if (!error) { carregar(); setNome(""); setLogo(""); setLink("") }
+      const { error } = await supabase.from('app_patrocinadores').insert({ evento_id: sorteioId, nome, logo_url: logo, link })
+      if (!error) { 
+          carregar(); setNome(""); setLogo(""); setLink("") 
+      } else {
+          alert("Erro ao adicionar: " + error.message)
+      }
   }
 
   const remover = async (id) => {
