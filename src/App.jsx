@@ -13,6 +13,7 @@ import ChangePinPage from './pages/ChangePinPage'
 import ClientSettings from './pages/ClientSettings'
 import FinancePanel from './pages/FinancePanel'
 import Layout from './components/Layout'
+import PaginaParticipacao from './components/PaginaParticipacao' // ROTA DA FASE 2
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -59,6 +60,7 @@ function App() {
             <Routes>
               {/* Rotas Públicas */}
               <Route path="/telao" element={<PublicDisplay />} />
+              <Route path="/participar/:slug" element={<PaginaParticipacao />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/radio/:slug" element={<RadioLogin />} />

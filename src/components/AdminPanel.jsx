@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Importador from './Importador'
-import { Settings, Play, RefreshCw, Trophy, Clock, Zap, Upload, Users, List, MonitorPlay, Check, X, Volume2, Ban, Gauge, Shuffle, Gift, Trash2, AlertCircle, VolumeX, FilePlus, Cloud } from 'lucide-react'
+import SorteioConfig from './SorteioConfig'
+import FormularioConfig from './FormularioConfig'
+import { Settings, Play, RefreshCw, Trophy, Clock, Zap, Upload, Users, List, MonitorPlay, Check, X, Volume2, Ban, Gauge, Shuffle, Gift, Trash2, AlertCircle, VolumeX, FilePlus, Cloud, RadioReceiver, PenTool } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import confetti from 'canvas-confetti'
@@ -31,6 +33,7 @@ const AdminPanel = () => {
     const [isSorteando, setIsSorteando] = useState(false)
     const [isModoEspera, setIsModoEspera] = useState(false)
     const [nomeAtual, setNomeAtual] = useState("...")
+    const [viewMode, setViewMode] = useState('sorteio')
     const [abaAtiva, setAbaAtiva] = useState('controle')
     const [novoBrinde, setNovoBrinde] = useState("")
     const [showImportador, setShowImportador] = useState(false)
@@ -370,7 +373,14 @@ const AdminPanel = () => {
                         <Trash2 className="w-5 h-5" />
                     </button>
 
-                    <Link to="/telao" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-bold shadow-lg shadow-indigo-900/20">
+                    <button onClick={() => setViewMode(viewMode === 'config' ? 'sorteio' : 'config')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'config' ? 'bg-indigo-600 shadow-lg shadow-indigo-900/40 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
+                        <RadioReceiver className="w-4 h-4" /> {viewMode === 'config' ? 'Voltar ao Sorteio' : 'Evento'}
+                    </button>
+                    <button onClick={() => setViewMode(viewMode === 'forms' ? 'sorteio' : 'forms')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'forms' ? 'bg-pink-600 shadow-lg shadow-pink-900/40 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
+                        <PenTool className="w-4 h-4" /> Forms
+                    </button>
+
+                    <Link to="/telao" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-bold shadow-lg shadow-purple-900/20">
                         <MonitorPlay className="w-4 h-4" /> Telão
                     </Link>
 
@@ -386,7 +396,12 @@ const AdminPanel = () => {
                 </div>
             </header>
 
+            {/* VIEWS SECUNDARIAS */}
+            {viewMode === 'config' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto w-full"><SorteioConfig user={user} /></div>}
+            {viewMode === 'forms' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto w-full"><FormularioConfig user={user} /></div>}
+
             {/* CONTEÚDO PRINCIPAL */}
+            {viewMode === 'sorteio' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
                 {/* COLUNA ESQUERDA: CONTROLE E IMPORTAÇÃO (8 colunas) */}
@@ -614,6 +629,7 @@ const AdminPanel = () => {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* MODAL DETALHES - MANTIDO IDÊNTICO MAS ADAPTADO PROS DADOS */}
             <AnimatePresence>
