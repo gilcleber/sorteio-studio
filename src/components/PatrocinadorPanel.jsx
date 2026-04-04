@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../services/supabaseClient'
-import { Plus, Trash2, Image } from 'lucide-react'
+import { Plus, Trash2, Image, Edit2 } from 'lucide-react'
 
 export default function PatrocinadorPanel({ sorteioId }) {
   const [patrocinadores, setPatrocinadores] = useState([])
   const [nome, setNome] = useState("")
   const [logo, setLogo] = useState("")
   const [link, setLink] = useState("")
+  const [editandoId, setEditandoId] = useState(null)
 
   useEffect(() => {
       if(sorteioId) carregar()
@@ -17,18 +18,37 @@ export default function PatrocinadorPanel({ sorteioId }) {
       if (data) setPatrocinadores(data)
   }
 
-  const adicionar = async () => {
+  const salvarOuEditar = async () => {
       if (!nome) return alert("O Nome ou Marca do patrocinador é obrigatório!")
-      const payload = { evento_id: sorteioId, nome };
-      if (logo) payload.logo_url = logo;
-      if (link) payload.link = link;
+      const payload = { 
+          evento_id: sorteioId, 
+          nome,
+          logo_url: logo || null,
+          link: link || null
+      };
 
-      const { error } = await supabase.from('app_patrocinadores').insert(payload)
-      if (!error) { 
-          carregar(); setNome(""); setLogo(""); setLink("") 
+      if (editandoId) {
+          const { error } = await supabase.from('app_patrocinadores').update(payload).eq('id', editandoId)
+          if (!error) { 
+              carregar(); limparForm() 
+          } else alert("Erro ao editar: " + error.message)
       } else {
-          alert("Erro ao adicionar: " + error.message)
+          const { error } = await supabase.from('app_patrocinadores').insert(payload)
+          if (!error) { 
+              carregar(); limparForm() 
+          } else alert("Erro ao adicionar: " + error.message)
       }
+  }
+
+  const limparForm = () => {
+      setNome(""); setLogo(""); setLink(""); setEditandoId(null);
+  }
+
+  const prepararEdicao = (p) => {
+      setNome(p.nome);
+      setLogo(p.logo_url || "");
+      setLink(p.link || "");
+      setEditandoId(p.id);
   }
 
   const remover = async (id) => {
@@ -47,7 +67,15 @@ export default function PatrocinadorPanel({ sorteioId }) {
             <input value={nome} onChange={e=>setNome(e.target.value)} type="text" placeholder="Nome da Marca *" className="bg-gray-900 border border-gray-700/50 rounded-lg px-3 py-2.5 text-sm outline-none text-white focus:border-purple-500" />
             <input value={logo} onChange={e=>setLogo(e.target.value)} type="url" placeholder="Logo (URL HTTP.png)" className="bg-gray-900 border border-gray-700/50 rounded-lg px-3 py-2.5 text-sm outline-none text-white focus:border-purple-500" />
             <input value={link} onChange={e=>setLink(e.target.value)} type="url" placeholder="URL do Cliq Site" className="bg-gray-900 border border-gray-700/50 rounded-lg px-3 py-2.5 text-sm outline-none text-white focus:border-purple-500" />
-            <button onClick={adicionar} className="bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white flex items-center justify-center text-sm font-bold gap-2 active:scale-95 transition-all shadow-md"><Plus className="w-4 h-4"/> ADD COTA</button>
+            
+            <div className="flex gap-2">
+                {editandoId && (
+                    <button onClick={limparForm} className="bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-bold px-3 transition-all" title="Cancelar Edição">✕</button>
+                )}
+                <button onClick={salvarOuEditar} className={`${editandoId ? 'bg-orange-600 hover:bg-orange-500' : 'bg-indigo-600 hover:bg-indigo-500'} flex-1 rounded-lg text-white flex items-center justify-center text-[10px] md:text-xs font-bold tracking-wide gap-2 active:scale-95 transition-all shadow-md`}>
+                    {editandoId ? "💾 SALVAR EDIÇÃO" : <><Plus className="w-4 h-4"/> ADD COTA</>}
+                </button>
+            </div>
          </div>
 
          <div className="space-y-2">
@@ -60,7 +88,10 @@ export default function PatrocinadorPanel({ sorteioId }) {
                             {p.link && <a href={p.link} target="_blank" className="text-[10px] text-blue-400 hover:underline">{p.link}</a>}
                         </div>
                     </div>
-                    <button onClick={()=>remover(p.id)} className="text-gray-500 hover:bg-red-900/30 hover:text-red-500 p-2 rounded-full transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    <div className="flex gap-1">
+                        <button onClick={()=>prepararEdicao(p)} className="text-gray-500 hover:bg-orange-900/40 hover:text-orange-400 p-2 rounded-full transition-colors" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={()=>remover(p.id)} className="text-gray-500 hover:bg-red-900/30 hover:text-red-500 p-2 rounded-full transition-colors" title="Excluir"><Trash2 className="w-4 h-4" /></button>
+                    </div>
                 </div>
             ))}
             {patrocinadores.length === 0 && <p className="text-center text-xs font-mono text-gray-600 py-4">Sorteio sem parceiros financiadores.</p>}
