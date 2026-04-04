@@ -24,7 +24,9 @@ export default function PaginaParticipacao() {
     useEffect(() => {
         const fetchData = async () => {
             // 1. Fetch Sorteio Config/Params na tabela Host (Historico)
+            console.log("DEBUG SLUG:", slug)
             const { data: sortData, error } = await supabase.from('app_historico').select('*').eq('slug', slug).maybeSingle()
+            console.log("DATA DO BANCO:", sortData, error)
             if (error || !sortData) { 
                 setSorteioStatus('not_found')
                 setLoading(false); 
