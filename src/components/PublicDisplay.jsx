@@ -64,25 +64,30 @@ const PublicDisplay = () => {
     }, [])
 
     const carregarMetadados = async () => {
-        // Tenta achar evento Master Ativo
-        const { data: sData } = await supabase.from('app_historico')
+        // Tenta achar evento Master Ativo (na tabela nativa)
+        const { data: sData } = await supabase.from('app_eventos')
            .select('*')
-           .is('data_ganho', null)
+           .eq('ativo', true)
            .order('created_at', { ascending: false })
            .limit(1)
 
         if (sData && sData.length > 0) {
             const trg = sData[0]
-            if (trg.premio) setPremioAtual(trg.premio)
+            if (trg.titulo) setPremioAtual(trg.titulo)
             setSorteioInfo(trg)
             
-            const { data: bData } = await supabase.from('app_brindes').select('imagem_url').eq('user_id', trg.user_id).eq('nome_brinde', trg.premio).single()
-            if (bData?.imagem_url) setBannerUrl(bData.imagem_url)
+            if (trg.premio_id) {
+                const { data: bData } = await supabase.from('app_brindes').select('imagem_url, nome_brinde').eq('id', trg.premio_id).single()
+                if (bData) {
+                    setPremioAtual(bData.nome_brinde)
+                    if (bData.imagem_url) setBannerUrl(bData.imagem_url)
+                }
+            }
 
             const { data: pData } = await supabase.from('app_patrocinadores').select('*').eq('sorteio_id', trg.id)
             if (pData) setPatrocinadores(pData)
 
-            const { count: qt } = await supabase.from('app_participantes').select('*', { count: 'exact', head: true }).eq('user_id', trg.user_id)
+            const { count: qt } = await supabase.from('app_participantes').select('*', { count: 'exact', head: true }).eq('evento_id', trg.id)
             if (qt !== null) setCount(qt)
         }
     }
