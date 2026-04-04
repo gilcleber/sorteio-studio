@@ -23,9 +23,9 @@ export default function PaginaParticipacao() {
 
     useEffect(() => {
         const fetchData = async () => {
-            // 1. Fetch Sorteio Config/Params na tabela Host (Historico)
+            // 1. Fetch Sorteio Config/Params na tabela Host (Eventos)
             console.log("DEBUG SLUG:", slug)
-            const { data: sortData, error } = await supabase.from('app_historico').select('*').eq('slug', slug).maybeSingle()
+            const { data: sortData, error } = await supabase.from('app_eventos').select('*').eq('slug', slug).eq('ativo', true).maybeSingle()
             console.log("DATA DO BANCO:", sortData, error)
             if (error || !sortData) { 
                 setSorteioStatus('not_found')
@@ -34,18 +34,11 @@ export default function PaginaParticipacao() {
             } 
             
             setSorteio(sortData)
+            setSorteioStatus('ativo') // Ativo garantido pelo .eq('ativo', true) no Banco
 
-            if (sortData.data_ganho !== null) {
-                setSorteioStatus('encerrado')
-                setLoading(false)
-                return
-            }
-            
-            setSorteioStatus('ativo')
-
-            // 2. Fetch Brinde Detail Extra Info (se aplicável na rodada)
-            if (sortData.premio) {
-                const { data: brindeData } = await supabase.from('app_brindes').select('*').eq('user_id', sortData.user_id).eq('nome_brinde', sortData.premio).single()
+            // 2. Fetch Brinde Detail Extra Info
+            if (sortData.premio_id) {
+                const { data: brindeData } = await supabase.from('app_brindes').select('*').eq('id', sortData.premio_id).single()
                 if (brindeData) setBrinde(brindeData)
             }
 
@@ -53,8 +46,8 @@ export default function PaginaParticipacao() {
             const { data: patData } = await supabase.from('app_patrocinadores').select('*').eq('sorteio_id', sortData.id)
             if (patData) setPatrocinadores(patData)
 
-            // 4. Form Rules
-            const { data: cfgData } = await supabase.from('app_formulario_config').select('*').eq('radio_id', sortData.user_id).single()
+            // 4. Form Rules vinculados ao evento_id
+            const { data: cfgData } = await supabase.from('app_formulario_config').select('*').eq('evento_id', sortData.id).single()
             if (cfgData) setConfigForm(cfgData)
 
             setLoading(false)
@@ -74,9 +67,9 @@ export default function PaginaParticipacao() {
              ...customFields
         }
 
-        // Insere o cidadão na caixa de participantes ativos daquele usuário/logista
+        // Insere o cidadão na caixa de participantes ativos
         const { error } = await supabase.from('app_participantes').insert({
-            user_id: sorteio.user_id,
+            evento_id: sorteio.id,
             nome: formData.nome,
             telefone: formData.telefone,
             cpf: formData.cpf,
@@ -118,7 +111,7 @@ export default function PaginaParticipacao() {
                     <div className="w-full bg-gradient-to-tr from-purple-700 to-indigo-600 p-10 text-center relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
                         <Trophy className="w-16 h-16 text-yellow-300 mx-auto mb-4 drop-shadow-lg" />
-                        <h1 className="text-white font-black text-3xl drop-shadow-md leading-tight">{sorteio.premio || "Participe do Sorteio"}</h1>
+                        <h1 className="text-white font-black text-3xl drop-shadow-md leading-tight">{sorteio.titulo || "Participe do Sorteio"}</h1>
                         <span className="inline-block mt-3 bg-white/20 text-white text-xs px-3 py-1 rounded-full font-bold backdrop-blur-md">Válido para hoje</span>
                     </div>
                 )}

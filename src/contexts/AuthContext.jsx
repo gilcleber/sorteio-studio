@@ -34,10 +34,11 @@ export const AuthProvider = ({ children }) => {
 
             setLicense(licenseData)
 
-            // Injeta isAdmin no usuário
+            // Injeta isAdmin e Slug no usuário
             const userWithRole = {
                 ...session.user,
-                isAdmin: profile?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com' // Fallback de segurança
+                isAdmin: profile?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com', // Fallback de segurança
+                slug: profile?.slug // Usado como radio_id na app_eventos
             }
             setUser(userWithRole)
         } else {

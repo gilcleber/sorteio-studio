@@ -21,7 +21,11 @@ export default function FormularioConfig({ user }) {
   }, [user])
 
   const carregarConfig = async () => {
-      const { data } = await supabase.from('app_formulario_config').select('*').eq('radio_id', user.id).single()
+      // Pega o id do evento rodando
+      const { data: evData } = await supabase.from('app_eventos').select('id').eq('radio_id', user.slug).eq('ativo', true).order('created_at', { ascending: false }).limit(1).single()
+      if (!evData) return;
+
+      const { data } = await supabase.from('app_formulario_config').select('*').eq('evento_id', evData.id).single()
       if (data) {
           if (data.campos?.length > 0) setCampos(data.campos)
           if (data.acao_pos_participacao) {
@@ -34,16 +38,24 @@ export default function FormularioConfig({ user }) {
 
   const salvar = async () => {
       setLoading(true)
+
+      const { data: evData } = await supabase.from('app_eventos').select('id').eq('radio_id', user.slug).eq('ativo', true).order('created_at', { ascending: false }).limit(1).single()
+      if (!evData) {
+          setLoading(false)
+          return alert("Erro: Você não possui um Sorteio Ativo. Por favor, crie/salve um novo Sorteio primeiro na tela anterior.")
+      }
+
       const payload = {
           radio_id: user.id,
+          evento_id: evData.id,
           campos,
           acao_pos_participacao: { mensagem: mensagemBase, instagram_url: linkInsta, link_externo: linkSite }
       }
       
-      const { data } = await supabase.from('app_formulario_config').select('id').eq('radio_id', user.id).single()
+      const { data } = await supabase.from('app_formulario_config').select('id').eq('evento_id', evData.id).single()
       let dbError = null;
       if (data) {
-          const { error } = await supabase.from('app_formulario_config').update(payload).eq('radio_id', user.id)
+          const { error } = await supabase.from('app_formulario_config').update(payload).eq('evento_id', evData.id)
           dbError = error;
       } else {
           const { error } = await supabase.from('app_formulario_config').insert(payload)

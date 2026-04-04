@@ -17,8 +17,8 @@ export default function SorteioConfig({ user }) {
    const [partCount, setPartCount] = useState(0)
 
    useEffect(() => {
-       if (sorteioAtivo?.user_id) {
-           supabase.from('app_participantes').select('*', { count: 'exact', head: true }).eq('user_id', sorteioAtivo.user_id)
+       if (sorteioAtivo?.id) {
+           supabase.from('app_participantes').select('*', { count: 'exact', head: true }).eq('evento_id', sorteioAtivo.id)
            .then(({ count }) => { if (count !== null) setPartCount(count) })
        }
    }, [sorteioAtivo])
@@ -29,25 +29,27 @@ export default function SorteioConfig({ user }) {
        const { data: bData } = await supabase.from('app_brindes').select('*').eq('user_id', user.id)
        if (bData) setBrindes(bData)
 
-       const { data: sData } = await supabase.from('app_historico')
+       const { data: sData } = await supabase.from('app_eventos')
            .select('*')
-           .eq('user_id', user.id)
-           .is('data_ganho', null) // Sorteio Atualmente Pendente / Em captação
+           .eq('radio_id', user.slug)
+           .eq('ativo', true)
            .order('created_at', { ascending: false })
            .limit(1)
 
        if (sData && sData.length > 0) {
-           preencheForm(sData[0])
+           preencheForm(sData[0], bData || [])
        }
    }
 
-   const preencheForm = (s) => {
+   const preencheForm = (s, brindesLoad) => {
        setSorteioAtivo(s)
-       setTitulo(s.slug ? s.slug.split('-').slice(0,-1).join(' ').toUpperCase() : "Sorteio " + new Date().toLocaleDateString())
+       setTitulo(s.titulo || (s.slug ? s.slug.split('-').slice(0,-1).join(' ').toUpperCase() : "Sorteio " + new Date().toLocaleDateString()))
        if (s.data_sorteio) setDataSorteio(s.data_sorteio.slice(0, 16))
-       setTipo(s.tipo || "unico")
+       setTipo(s.modo || "unico")
        setQtd(s.qtd_ganhadores || 1)
-       setPremioSel(s.premio || "")
+       
+       const brindeObj = brindesLoad.find(b => b.id === s.premio_id)
+       setPremioSel(brindeObj ? brindeObj.nome_brinde : "")
    }
 
    const salvarOuCriar = async () => {
@@ -58,23 +60,29 @@ export default function SorteioConfig({ user }) {
        const baseSlug = titulo.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random()*10000)
        
        const novoSlug = sorteioAtivo?.slug || baseSlug;
+       
+       const objPremio = brindes.find(b => b.nome_brinde === premioSel);
+       const pId = objPremio ? objPremio.id : null;
+
        const payload = {
-           user_id: user.id,
+           radio_id: user.slug,
+           titulo,
            slug: novoSlug,
-           premio: premioSel,
+           premio_id: pId,
            data_sorteio: dataSorteio ? new Date(dataSorteio).toISOString() : null,
-           tipo,
-           qtd_ganhadores: qtd
+           modo: tipo,
+           qtd_ganhadores: qtd,
+           ativo: true
        }
        
        setSorteioAtivo(prev => ({ ...prev, ...payload }));
 
        let dbError = null;
        if (sorteioAtivo) {
-           const { error } = await supabase.from('app_historico').update(payload).eq('id', sorteioAtivo.id)
+           const { error } = await supabase.from('app_eventos').update(payload).eq('id', sorteioAtivo.id)
            dbError = error;
        } else {
-           const { error } = await supabase.from('app_historico').insert(payload)
+           const { error } = await supabase.from('app_eventos').insert(payload)
            dbError = error;
        }
        
