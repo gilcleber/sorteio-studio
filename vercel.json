@@ -1,8 +1,22 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/((?!assets|favicon.ico).*)",
-      "destination": "/"
+      "src": "^/assets/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      },
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "^/(.*\\.(js|css|png|jpg|jpeg|svg|ico|json|woff2?|ttf|eot))$",
+      "headers": {
+        "cache-control": "public, max-age=86400"
+      },
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/"
     }
   ]
 }
