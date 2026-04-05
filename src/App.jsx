@@ -67,23 +67,43 @@ function App() {
               <Route path="/radio/:slug" element={<RadioLogin />} />
               <Route path="/trocar-pin" element={<ChangePinPage />} />
 
-              {/* Rotas Protegidas (Logado) */}
+              {/* Rotas Protegidas (Logado - Rádio) */}
               <Route
                 path="/"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute requiredRole="radio_admin">
                     <Layout>
-                      <AdminPanel />
+                      <AdminPanel initialView="sorteio" />
                     </Layout>
                   </PrivateRoute>
                 }
               />
               <Route
-                path="/super-admin"
+                path="/configuracoes-sorteio"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute requiredRole="radio_admin">
                     <Layout>
-                      <SuperAdmin />
+                      <AdminPanel initialView="config" />
+                    </Layout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/formulario"
+                element={
+                  <PrivateRoute requiredRole="radio_admin">
+                    <Layout>
+                      <AdminPanel initialView="forms" />
+                    </Layout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/relatorios"
+                element={
+                  <PrivateRoute requiredRole="radio_admin">
+                    <Layout>
+                      <AdminPanel initialView="relatorios" />
                     </Layout>
                   </PrivateRoute>
                 }
@@ -91,9 +111,21 @@ function App() {
               <Route
                 path="/configuracoes"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute requiredRole="radio_admin">
                     <Layout>
                       <ClientSettings />
+                    </Layout>
+                  </PrivateRoute>
+                }
+              />
+
+              {/* Rotas Protegidas (Logado - Super Admin) */}
+              <Route
+                path="/super-admin"
+                element={
+                  <PrivateRoute requiredRole="super_admin">
+                    <Layout>
+                      <SuperAdmin />
                     </Layout>
                   </PrivateRoute>
                 }
@@ -101,7 +133,7 @@ function App() {
               <Route
                 path="/financeiro"
                 element={
-                  <PrivateRoute>
+                  <PrivateRoute requiredRole="super_admin">
                     <Layout>
                       <FinancePanel />
                     </Layout>

@@ -34,13 +34,17 @@ export const AuthProvider = ({ children }) => {
 
             setLicense(licenseData)
 
-            // Verifica isAdmin
-            const isAdmin = profile?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com'
+            // Role Source of Truth (Database)
+            const role = profile?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com' 
+                ? 'super_admin' 
+                : 'radio_admin'
+
+            const isAdmin = role === 'super_admin'
             
             let finalUserId = session.user.id
             let finalSlug = profile?.slug
 
-            // Master Impersonation Bypass (Bugs 1 e 5)
+            // Master Impersonation Bypass
             if (isAdmin) {
                 const impId = sessionStorage.getItem('impersonate_user_id')
                 const impSlug = sessionStorage.getItem('impersonate_slug')
@@ -50,13 +54,20 @@ export const AuthProvider = ({ children }) => {
                 }
             }
 
-            // Injeta isAdmin, Slug e ID real/impersonado
+            // Persistência de Contexto (Radio)
+            if (finalSlug) {
+                localStorage.setItem('radioSlug', finalSlug)
+            }
+
+            // Injeta Role, Slug e ID real/impersonado
             const userWithRole = {
                 ...session.user,
                 id: finalUserId,
+                role: role,
                 isAdmin: isAdmin,
                 slug: finalSlug,
-                realId: session.user.id // mantem backup
+                nome_completo: profile?.nome_completo,
+                realId: session.user.id
             }
             setUser(userWithRole)
         } else {

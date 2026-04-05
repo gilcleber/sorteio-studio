@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../services/supabaseClient'
-import { Home, Settings, DollarSign, Shield, LogOut, Radio } from 'lucide-react'
+import { Home, Settings, DollarSign, Shield, LogOut, Radio, MonitorPlay, PenTool, List } from 'lucide-react'
 
 const Sidebar = () => {
     const navigate = useNavigate()
@@ -41,33 +41,56 @@ const Sidebar = () => {
         }
     }
 
-    const menuItems = [
+    const menuItems = user?.role === 'super_admin' ? [
         {
-            name: 'Sorteios',
-            icon: Home,
-            path: '/',
-            show: true
-        },
-        {
-            name: 'Configurações',
-            icon: Settings,
-            path: '/configuracoes',
+            name: 'Super Admin',
+            icon: Shield,
+            path: '/super-admin',
             show: true
         },
         {
             name: 'Financeiro',
             icon: DollarSign,
             path: '/financeiro',
-            show: user?.isAdmin
+            show: true
         },
         {
-            name: 'Super Admin',
-            icon: Shield,
-            path: undefined, // path removed to avoid navigation error in mapping 
-            // Wait, path is used in mapping. Keeping original structure but checking logic.
-            // Original code: path: '/super-admin'
+            name: 'Gestão de Rádios',
+            icon: Radio,
             path: '/super-admin',
-            show: user?.isAdmin
+            show: true
+        }
+    ] : [
+        {
+            name: '🎯 Sorteios',
+            icon: Home,
+            path: '/',
+            show: true
+        },
+        {
+            name: '⚙️ Configurações',
+            icon: Settings,
+            path: '/configuracoes',
+            show: true
+        },
+        {
+            name: '📄 Formulário',
+            icon: PenTool,
+            path: '/formulario',
+            show: true
+        },
+        {
+            name: '📺 Telão',
+            icon: MonitorPlay,
+            path: '/telao',
+            show: true,
+            external: true
+        },
+        {
+            name: '🧾 Relatórios',
+            icon: List,
+            path: '/relatorios',
+            show: true
         }
     ]
 
@@ -151,8 +174,17 @@ const Sidebar = () => {
 
                     return (
                         <button
-                            key={item.path}
-                            onClick={() => navigate(item.path)}
+                            key={item.name}
+                            onClick={() => {
+                                if (item.external) {
+                                    // Pega o último evento_id se existir
+                                    const eventId = localStorage.getItem('last_evento_id')
+                                    const path = eventId ? `${item.path}/${eventId}` : item.path
+                                    window.open(path, '_blank')
+                                } else {
+                                    navigate(item.path)
+                                }
+                            }}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
                                 ? 'text-white shadow-lg'
                                 : 'text-gray-400 hover:bg-gray-800 hover:text-white'

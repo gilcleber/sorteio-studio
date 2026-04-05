@@ -3,7 +3,7 @@ import Importador from './Importador'
 import SorteioConfig from './SorteioConfig'
 import FormularioConfig from './FormularioConfig'
 import RelatorioPanel from './RelatorioPanel'
-import { Settings, Play, RefreshCw, Trophy, Clock, Zap, Upload, Users, List, MonitorPlay, Check, X, Volume2, Ban, Gauge, Shuffle, Gift, Trash2, AlertCircle, VolumeX, FilePlus, Cloud, RadioReceiver, PenTool } from 'lucide-react'
+import { Settings, Play, RefreshCw, Trophy, Clock, Zap, Upload, Users, List, MonitorPlay, Check, X, Volume2, Ban, Gauge, Shuffle, Gift, Trash2, AlertCircle, VolumeX, FilePlus, Cloud, RadioReceiver, PenTool, LogOut } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import confetti from 'canvas-confetti'
@@ -16,9 +16,9 @@ const SOUNDS = {
     win: new Audio('/sons/vitoria.mp3')
 }
 
-const AdminPanel = () => {
+const AdminPanel = ({ initialView = 'sorteio' }) => {
     const { user, signOut } = useAuth()
-
+    
     // --- ESTADOS DE DADOS (NUVEM) ---
     const [participantes, setParticipantes] = useState([])
     const [historico, setHistorico] = useState([])
@@ -27,7 +27,7 @@ const AdminPanel = () => {
     const [eventoAtivoId, setEventoAtivoId] = useState(null)
     const [toasts, setToasts] = useState([])
 
-    // Estados locais (Configurações simples podem ficar locais por enquanto ou localStorage)
+    // Estados locais
     const [importStats, setImportStats] = useState(null)
     const [loadingData, setLoadingData] = useState(true)
 
@@ -36,10 +36,14 @@ const AdminPanel = () => {
     const [isSorteando, setIsSorteando] = useState(false)
     const [isModoEspera, setIsModoEspera] = useState(false)
     const [nomeAtual, setNomeAtual] = useState("...")
-    const [viewMode, setViewMode] = useState('sorteio')
+    const [viewMode, setViewMode] = useState(initialView)
     const [abaAtiva, setAbaAtiva] = useState('controle')
     const [novoBrinde, setNovoBrinde] = useState("")
     const [showImportador, setShowImportador] = useState(false)
+
+    useEffect(() => {
+        if (initialView) setViewMode(initialView)
+    }, [initialView])
 
     // Configurações (Mantidas local por preferência de sessão)
     const [duracao, setDuracao] = useState(3)
@@ -75,6 +79,7 @@ const AdminPanel = () => {
                 if (eventData && eventData.length > 0) {
                     currentEventoId = eventData[0].id
                     setEventoAtivoId(currentEventoId)
+                    localStorage.setItem('last_evento_id', currentEventoId)
                 }
 
                 // 2. Participantes (Apenas do evento ativo - Bug 3)
@@ -100,7 +105,6 @@ const AdminPanel = () => {
                 }
             } catch (error) {
                 console.error("Erro ao sincronizar:", error)
-                alert("Erro ao conectar com a nuvem. Verifique sua internet.")
             } finally {
                 setLoadingData(false)
             }
@@ -150,7 +154,7 @@ const AdminPanel = () => {
         channelRef.current.postMessage({ type: isModoEspera ? 'STOP_IDLE' : 'START_IDLE' })
     }
 
-    // --- REAL-TIME LISTENER (NOVO) ---
+    // --- REAL-TIME LISTENER ---
     useEffect(() => {
         const channel = supabase.channel('realtime:admin_participantes')
             .on('postgres_changes', { 
@@ -159,129 +163,70 @@ const AdminPanel = () => {
                 table: 'app_participantes'
             }, (payload) => {
                 const newPart = payload.new;
-                
-                // Apenas atualizar se pertencer ao evento atual
                 if (eventoAtivoId && newPart.evento_id && newPart.evento_id !== eventoAtivoId) return;
-
                 setParticipantes(prev => [newPart, ...prev]);
-
-                // Toast Notification
                 const toastId = Math.random().toString(36).substr(2, 9);
                 setToasts(prev => [...prev, { id: toastId, nome: newPart.nome, cidade: newPart.cidade }]);
-                
-                setTimeout(() => {
-                    setToasts(current => current.filter(t => t.id !== toastId));
-                }, 4500);
+                setTimeout(() => setToasts(current => current.filter(t => t.id !== toastId)), 4500);
             })
             .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        }
+        return () => supabase.removeChannel(channel);
     }, [eventoAtivoId]);
 
-    // --- SORTEIO (AGORA SERVER-SIDE & COM UX AUMENTADA) ---
+    // --- SORTEIO ---
     const loopSorteio = (startTime) => {
-        // Giro visual provisório apenas para animação da roleta
         const randomIndex = Math.floor(Math.random() * participantes.length)
         const nomeSorteado = participantes[randomIndex].nome
-
         setNomeAtual(nomeSorteado)
         channelRef.current.postMessage({ type: 'UPDATE_NAME', payload: nomeSorteado })
-
-        // UX: Vibração Tátil (Haptic Feedback) via API do Navegador
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate(50) // Pequeno pulso de 50ms simulando passar p/ próximo nome
-        }
-
-        // UX: Progresso e Tensão Dinâmica do Audio (Pitch Ascendente)
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50)
         if (SOUNDS.drum && volume) {
-            const timeElapsed = Date.now() - startTime
-            const ratio = timeElapsed / (duracaoRef.current * 1000)
-            const newPitch = 1 + (ratio * 1.5) // Acelera o playback gradativamente até 2.5x
-
-            try {
-                SOUNDS.drum.playbackRate = newPitch > 2.5 ? 2.5 : newPitch
-            } catch (e) {
-                console.log("Ajuste de playbackRate não suportado pelo browser.", e)
-            }
+            const ratio = (Date.now() - startTime) / (duracaoRef.current * 1000)
+            const newPitch = 1 + (ratio * 1.5)
+            try { SOUNDS.drum.playbackRate = newPitch > 2.5 ? 2.5 : newPitch } catch (e) {}
         }
-
-        if (Date.now() - startTime > duracaoRef.current * 1000) {
-            finalizarSorteio()
-        } else {
-            timeoutRef.current = setTimeout(() => loopSorteio(startTime), velocidadeRef.current)
-        }
+        if (Date.now() - startTime > duracaoRef.current * 1000) finalizarSorteio()
+        else timeoutRef.current = setTimeout(() => loopSorteio(startTime), velocidadeRef.current)
     }
 
     const iniciarSorteio = () => {
         if (participantes.length === 0) return alert("Adicione participantes primeiro!")
-        
-        // Debounce Real-State: Impede clicks duplicadíssimos caso force a barra
         if (isSorteando) return 
-
         setIsModoEspera(false)
         setIsSorteando(true)
         setGanhador(null)
-        const tempoInicio = Date.now()
-
         channelRef.current.postMessage({ type: 'START_ROLLING', prize: brindeAtual })
-
         if (volume) {
-            try { SOUNDS.drum.playbackRate = 1.0 } catch(e){} // Reseta pitch ao iniciar
+            try { SOUNDS.drum.playbackRate = 1.0 } catch(e){}
             SOUNDS.drum.currentTime = 0
-            SOUNDS.drum.play().catch(e => console.log("Erro som:", e))
+            SOUNDS.drum.play().catch(e => {})
         }
-
-        loopSorteio(tempoInicio)
+        loopSorteio(Date.now())
     }
 
     const finalizarSorteio = async () => {
         clearTimeout(timeoutRef.current)
-        
-        // Mantém state ocupado para evitar conflitos até o servidor responder
-        setNomeAtual("Processando no Servidor...")
-
+        setNomeAtual("Processando...")
         try {
-            // ---> MIGRAÇÃO: LOGICA MOVIDA PARA UMA RPC TOTALMENTE SEGURA NO SUPABASE
             const { data: ganhadorFinal, error } = await supabase.rpc('executar_sorteio_seguro', {
                 p_user_id: user.id,
                 p_brinde: brindeAtual,
                 p_evento_id: eventoAtivoId
             })
-
-            if (error || !ganhadorFinal) {
-                console.error("Erro na Database Function:", error)
-                alert("Erro de segurança no sorteio (Servidor): " + (error?.message || "Desconhecido"))
-                
-                // Reseta estado local por haver falha de nuvem
-                setIsSorteando(false)
-                setNomeAtual("Erro!")
-                if (volume) SOUNDS.drum.pause()
-                return
-            }
-
+            if (error || !ganhadorFinal) throw error || new Error("Indefinido")
             if (volume) {
                 SOUNDS.drum.pause()
-                SOUNDS.drum.currentTime = 0
-                try { SOUNDS.drum.playbackRate = 1.0 } catch(e){} // Reseta pitch
-                SOUNDS.win.play().catch(e => console.log("Erro som vitória:", e))
+                SOUNDS.win.play().catch(e => {})
             }
-
             setGanhador(ganhadorFinal)
             setNomeAtual(ganhadorFinal.nome)
             setIsSorteando(false)
-
-            // A transação do Supabase já inseriu, a gente só alimenta o Cache React local:
             setHistorico([ganhadorFinal, ...historico])
-
             channelRef.current.postMessage({ type: 'WINNER_SELECTED', payload: ganhadorFinal })
             dispararConfete()
-
-        } catch (catastrophicError) {
-            console.error("Falha gravíssima ao contactar o BD:", catastrophicError)
+        } catch (e) {
             setIsSorteando(false)
-            setNomeAtual("Tentativa Falhou")
+            setNomeAtual("Erro!")
         }
     }
 
@@ -293,167 +238,93 @@ const AdminPanel = () => {
         channelRef.current.postMessage({ type: 'RESET' })
     }
 
-    // --- GESTÃO DE DADOS (IMPORTAÇÃO VIA SUPABASE) ---
+    // --- GESTÃO DE DADOS ---
     const handleDataLoaded = async (novosDados, novosStats) => {
-        if (!user) return
-
-        if (!eventoAtivoId) {
-            alert("Nenhum evento ativo selecionado para importar participantes.")
-            return
-        }
-
-        // 1. LIMPEZA TOTAL DO EVENTO ATIVO
+        if (!user || !eventoAtivoId) return
         await supabase.from('app_participantes').delete().eq('evento_id', eventoAtivoId)
-
-        // Prepara dados
-        const dadosParaInserir = novosDados.map(p => ({
-            user_id: user.id,
-            evento_id: eventoAtivoId,
-            nome: p.nome,
-            telefone: p.telefone,
-            cpf: p.cpf,
-            email: p.email,
-            detalhes: p.detalhes,
-            origem: 'importacao'
-        }))
-
-        // 2. Insert Novos
+        const dadosParaInserir = novosDados.map(p => ({ user_id: user.id, evento_id: eventoAtivoId, nome: p.nome, telefone: p.telefone, cpf: p.cpf, email: p.email, detalhes: p.detalhes, origem: 'importacao' }))
         const { data, error } = await supabase.from('app_participantes').insert(dadosParaInserir).select()
-
-        if (error) {
-            alert("Erro ao salvar dados na nuvem: " + error.message)
-            return
-        }
-
-        // Atualiza estado local (SUBSTITUI TUDO)
-        const novosComId = data || []
-        setParticipantes(novosComId) // Substitui array antigo
-
-        setImportStats({
-            ...novosStats,
-            totalValido: novosComId.length,
-            novosAdicionados: novosComId.length
-        })
-
+        if (error) return alert("Erro: " + error.message)
+        setParticipantes(data || [])
+        setImportStats({ ...novosStats, totalValido: data.length, novosAdicionados: data.length })
         setShowImportador(false)
-        alert(`Lista atualizada! ${novosComId.length} participantes sincronizados.`)
     }
 
     const addBrinde = async () => {
         if (!novoBrinde.trim()) return
-
-        // Salvar no Banco
-        const { error } = await supabase.from('app_brindes').insert({
-            user_id: user.id,
-            nome_brinde: novoBrinde,
-            ativo: true
-        })
-
-        if (!error) {
-            setBrindes([...brindes, novoBrinde])
-            setNovoBrinde("")
-        } else {
-            alert("Erro ao salvar brinde.")
-        }
+        const { error } = await supabase.from('app_brindes').insert({ user_id: user.id, nome_brinde: novoBrinde, ativo: true })
+        if (!error) { setBrindes([...brindes, novoBrinde]); setNovoBrinde("") }
     }
 
     const removerBrinde = async (index) => {
-        const brindeParaRemover = brindes[index]
-
-        // Remove do banco (pelo nome, cuidado se tiver nomes iguais, mas ok por user_id)
-        const { error } = await supabase.from('app_brindes').delete().match({ user_id: user.id, nome_brinde: brindeParaRemover })
-
+        const b = brindes[index]
+        const { error } = await supabase.from('app_brindes').delete().match({ user_id: user.id, nome_brinde: b })
         if (!error) {
             const novos = brindes.filter((_, i) => i !== index)
             setBrindes(novos)
-            if (brindeAtual === brindeParaRemover && novos.length > 0) setBrindeAtual(novos[0])
+            if (brindeAtual === b && novos.length > 0) setBrindeAtual(novos[0])
         }
     }
 
     const limparTudo = async () => {
         if (!eventoAtivoId) return;
-        if (confirm("ATENÇÃO: Isso apagará TODO o histórico e participantes DESTE EVENTO na NUVEM. Dados serão perdidos. Continuar?")) {
+        if (confirm("ATENÇÃO: Isso apagará histórico e participantes DESTE EVENTO. Continuar?")) {
             await supabase.from('app_participantes').delete().eq('evento_id', eventoAtivoId)
-            // Também limpar histórico associado ao evento se houver? Pela regra antiga: eq user.id, mas agora é evento: (vamos manter limpar tudo deste usuário para histórico pois n tinha fk no histórico, ou nao fazemos nada no historico se for só deste evento? melhor nao apagar historico, histórico é valioso).
-            // O ideal é deletar apenas do evento. Como app_historico tem p_evento_id?
-            await supabase.from('app_historico').delete().eq('user_id', user.id) // Opcional, mantido igual por enquanto
-            
             setParticipantes([])
-            setHistorico([])
-            setImportStats(null)
-            setGanhador(null)
             window.location.reload()
         }
     }
 
     const removerGanhador = async (id, e) => {
         e.stopPropagation()
-        if (!confirm("Tem certeza que deseja apagar este ganhador do histórico?")) return
-
+        if (!confirm("Remover ganhador?")) return
         const { error } = await supabase.from('app_historico').delete().eq('id', id)
-        if (!error) {
-            setHistorico(historico.filter(h => h.id !== id))
-        } else {
-            alert("Erro ao remover: " + error.message)
-        }
+        if (!error) setHistorico(historico.filter(h => h.id !== id))
     }
 
-    // --- RENDERIZADORES ---
     const abrirDetalhes = (g) => { setGanhadorSelecionado(g); setIsModalOpen(true) }
 
-    // BLINDAGEM DE RENDER: Impede Runtime Crash por Variáveis indefinidas antes do React Hydration
-    if (!participantes) return <div className="p-10 text-white font-mono text-center">Carregando painel de sorteios...</div>;
+    if (!participantes) return <div className="p-10 text-white font-mono text-center">Carregando painel...</div>;
 
     return (
         <div className="min-h-screen bg-gray-950 text-white p-4 md:p-6 font-sans flex flex-col gap-4">
-
-            {/* TOPO */}
+            {/* NOVO TOPBAR SIMPLIFICADO (CTO REQUEST) */}
             <header className="flex flex-col md:flex-row justify-between items-center bg-gray-900/80 backdrop-blur p-4 rounded-xl border border-gray-800 shadow-lg sticky top-0 z-40">
                 <div className="flex items-center gap-4">
                     <div className="bg-purple-600/20 p-2 rounded-lg"><Cloud className="w-6 h-6 text-purple-400" /></div>
                     <div>
-                        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Sorteio Studio <span className="text-[10px] bg-green-500 text-black px-2 rounded-full font-bold ml-2">PRO</span></h1>
-                        <p className="text-xs text-gray-500 flex gap-2 items-center">
-                            {loadingData ? "Sincronizando..." : `${participantes.length} Participantes • ${historico.length} Ganhadores`}
+                        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                           {user?.nome_completo || 'Painel da Rádio'}
+                        </h1>
+                        <p className="text-xs text-gray-500 uppercase tracking-widest font-black">
+                            Sorteio Studio Client
                         </p>
                     </div>
                 </div>
 
-                <div className="flex gap-3 items-center mt-4 md:mt-0">
-                    <button onClick={() => setVolume(!volume)} className={`p-2 rounded-lg transition-all ${volume ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'}`}>
-                        {volume ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-                    </button>
+                <div className="flex gap-4 items-center mt-4 md:mt-0">
+                    {/* Status do Sistema (CTO Adjusted) */}
+                    <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-1.5 rounded-full border border-gray-700">
+                        <span className={`w-2 h-2 rounded-full ${participantes.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            {participantes.length > 0 ? 'Sistema Online' : 'Aguardando Dados'}
+                        </span>
+                    </div>
 
-                    <button onClick={limparTudo} className="p-2 rounded-lg text-red-500 hover:bg-red-900/20" title="Zerar Sistema">
-                        <Trash2 className="w-5 h-5" />
-                    </button>
-
-                    <button onClick={() => setViewMode(viewMode === 'config' ? 'sorteio' : 'config')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'config' ? 'bg-indigo-600 shadow-lg shadow-indigo-900/40 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
-                        <RadioReceiver className="w-4 h-4" /> {viewMode === 'config' ? 'Voltar ao Sorteio' : 'Evento'}
-                    </button>
-                    <button onClick={() => setViewMode(viewMode === 'forms' ? 'sorteio' : 'forms')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'forms' ? 'bg-pink-600 shadow-lg shadow-pink-900/40 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}>
-                        <PenTool className="w-4 h-4" /> Forms
-                    </button>
-
-                    <Link to={`/telao${eventoAtivoId ? `/${eventoAtivoId}` : ''}`} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-bold shadow-lg shadow-purple-900/20">
-                        <MonitorPlay className="w-4 h-4" /> Telão
-                    </Link>
-
-                    {user && user.isAdmin && (
-                        <Link to="/super-admin" className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold border border-gray-700">
-                            <Settings className="w-4 h-4" /> Admin
-                        </Link>
-                    )}
-
-                    <button onClick={signOut} className="flex items-center gap-2 px-4 py-2 bg-red-900/50 hover:bg-red-900 rounded-lg text-sm font-bold border border-red-900">
-                        Sair
+                    <button 
+                        onClick={signOut} 
+                        className="flex items-center gap-2 px-4 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg text-xs font-bold border border-red-900/30 transition-all"
+                    >
+                        <LogOut className="w-4 h-4" /> Sair
                     </button>
                 </div>
             </header>
 
-            {/* VIEWS SECUNDARIAS */}
+            {/* VIEWS */}
             {viewMode === 'config' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto w-full"><SorteioConfig user={user} /></div>}
             {viewMode === 'forms' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto w-full"><FormularioConfig user={user} /></div>}
+            {viewMode === 'relatorios' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto w-full"><RelatorioPanel participantes={participantes} eventoAtivoId={eventoAtivoId} tituloEvento="Relatório Geral" brinde={brindeAtual} /></div>}
+
 
             {/* CONTEÚDO PRINCIPAL */}
             {viewMode === 'sorteio' && (

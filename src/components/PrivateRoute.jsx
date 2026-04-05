@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Lock, AlertOctagon } from 'lucide-react'
 
-const PrivateRoute = ({ children }) => {
+const PrivateRoute = ({ children, requiredRole }) => {
     const { user, loading, license } = useAuth()
 
     if (loading) {
@@ -17,6 +17,10 @@ const PrivateRoute = ({ children }) => {
 
     if (!user) {
         return <Navigate to="/login" />
+    }
+
+    if (requiredRole && user.role !== requiredRole) {
+        return <Navigate to={user.role === 'super_admin' ? '/super-admin' : '/'} />
     }
 
     // Opcional: Bloqueio estrito de licença
