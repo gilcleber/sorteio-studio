@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import Importador from './Importador'
 import SorteioConfig from './SorteioConfig'
 import FormularioConfig from './FormularioConfig'
+import RelatorioPanel from './RelatorioPanel'
 import { Settings, Play, RefreshCw, Trophy, Clock, Zap, Upload, Users, List, MonitorPlay, Check, X, Volume2, Ban, Gauge, Shuffle, Gift, Trash2, AlertCircle, VolumeX, FilePlus, Cloud, RadioReceiver, PenTool } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
@@ -573,6 +574,12 @@ const AdminPanel = () => {
                         {/* ABA Lista Completa (Participantes) */}
                         {abaAtiva === 'participantes' && (
                             <div className="space-y-2">
+                                <RelatorioPanel 
+                                    participantes={participantes} 
+                                    eventoAtivoId={eventoAtivoId} 
+                                    tituloEvento={"Sorteio (Gerado Via Sistema)"} 
+                                    premio={brindeAtual} 
+                                />
                                 <div className="text-center text-xs text-gray-500 mb-4">{participantes?.length || 0} participantes sincronizados</div>
                                 {participantes?.slice(0, 100).map((p, i) => (
                                     <div key={i} onClick={() => abrirDetalhes(p)} className="text-xs text-gray-400 border-b border-gray-800 py-2 flex justify-between hover:bg-gray-800/50 cursor-pointer px-2 rounded transition-colors group">
