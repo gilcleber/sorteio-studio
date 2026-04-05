@@ -18,8 +18,40 @@ const SuperAdmin = () => {
     const [creating, setCreating] = useState(false)
 
     useEffect(() => {
-        fetchClients()
+        fetchClients().then(() => {
+            ensureTestRadio()
+        })
     }, [])
+
+    const ensureTestRadio = async () => {
+        try {
+            // Verifica se a rádio de teste padrão existe
+            const { data: existing } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('slug', 'radio-teste')
+                .maybeSingle()
+
+            if (!existing) {
+                console.log("🛠️ Criando Rádio de Teste Automática...")
+                const pin = "1234"
+                const { error } = await supabase.rpc('create_radio_account', {
+                    email: 'teste@sorteiostudio.com',
+                    password: pin,
+                    name: 'Rádio Teste',
+                    user_slug: 'radio-teste'
+                })
+
+                if (!error) {
+                    // Tenta marcar como teste
+                    await supabase.from('profiles').update({ is_test: true }).eq('slug', 'radio-teste').catch(() => {})
+                    fetchClients()
+                }
+            }
+        } catch (err) {
+            console.error("Erro ao garantir rádio de teste:", err)
+        }
+    }
 
     const generatePin = () => Math.floor(1000 + Math.random() * 9000).toString()
 
@@ -34,10 +66,9 @@ const SuperAdmin = () => {
 
         setCreating(true)
         try {
-            // Chama a função RPC criada via SQL
             const { data, error } = await supabase.rpc('create_radio_account', {
                 email: newRadio.email,
-                password: newRadio.password, // Usa o PIN como senha inicial
+                password: newRadio.password,
                 name: newRadio.nome,
                 user_slug: newRadio.slug
             })
@@ -46,7 +77,7 @@ const SuperAdmin = () => {
 
             alert(`Rádio ${newRadio.nome} criada com sucesso!\nPIN Inicial: ${newRadio.password}`)
             setShowCreateModal(false)
-            fetchClients() // Recarrega lista
+            fetchClients()
 
         } catch (error) {
             console.error("Erro ao criar rádio:", error)
@@ -88,6 +119,7 @@ const SuperAdmin = () => {
                     role: p.role,
                     slug: p.slug,
                     pin: p.pin,
+                    is_test: p.is_test || p.slug === 'radio-teste', // Fallback se a coluna não existir
                     status: license?.status || 'pending',
                     expires_at: license?.expires_at,
                     plan_type: license?.plan_type || 'trial',
@@ -295,7 +327,7 @@ const SuperAdmin = () => {
 
                                 {/* Info Cliente */}
                                 <div className="flex items-center gap-6 flex-1 w-full lg:w-auto">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${client.role === 'admin' ? 'bg-purple-600' : 'bg-gray-800'}`}>
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${client.is_test ? 'bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]' : client.role === 'admin' ? 'bg-purple-600' : 'bg-gray-800'}`}>
                                         {client.nome ? client.nome.charAt(0).toUpperCase() : '?'}
                                     </div>
                                     <div>
@@ -316,7 +348,8 @@ const SuperAdmin = () => {
                                                 className="font-bold text-lg text-white bg-transparent border-b border-transparent hover:border-gray-600 focus:border-purple-500 focus:outline-none px-1 -mx-1"
                                                 placeholder="Nome da rádio"
                                             />
-                                            {client.role === 'admin' && <span className="text-[10px] bg-purple-900/50 text-purple-300 px-2 rounded-full border border-purple-500/50">ADMIN</span>}
+                                            {client.role === 'admin' && <span className="text-[10px] bg-purple-900/50 text-purple-300 px-2 rounded-full border border-purple-500/50 uppercase font-bold">Admin</span>}
+                                            {client.is_test && <span className="text-[10px] bg-blue-900/50 text-blue-300 px-2 rounded-full border border-blue-500/50 uppercase font-black">Teste</span>}
                                         </div>
                                         <p className="text-gray-400 text-sm">{client.email}</p>
                                         <p className="text-gray-500 text-xs mt-1 flex items-center gap-1"><Users className="w-3 h-3" /> {client.telefone}</p>

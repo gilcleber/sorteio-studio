@@ -18,21 +18,28 @@ const RadioLogin = () => {
     useEffect(() => {
         const checkSessionAndAuth = async () => {
             const { data: { session } } = await supabase.auth.getSession()
-            const isMaster = session?.user?.email === 'admin@master.com' || session?.user?.email === 'gilcleberlocutor@gmail.com'
+            
+            // 1. Busca perfil para validar role real (não confia apenas no email hardcoded)
+            let isMaster = false
+            if (session?.user) {
+                const { data: prof } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+                isMaster = prof?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com'
+            }
             
             if (isMaster) {
-                // Impersonate mode: Master becomes the radio
+                // Impersonate mode: Master becomes the radio (TAB-ONLY)
                 const { data: p } = await supabase.from('profiles').select('id').eq('slug', slug).single()
                 if (p) {
                     sessionStorage.setItem('impersonate_user_id', p.id)
                     sessionStorage.setItem('impersonate_slug', slug)
+                    // Redireciona para o painel principal preservando a sessão Master
                     window.location.href = '#/'
                     return
                 }
             }
 
-            // Normal flow: Força logout
-            await supabase.auth.signOut()
+            // Se NÃO for Master e estiver tentando acessar outra rádio, limpa impersonação
+            // Mas NÃO desloga o usuário real (independência de sessões)
             sessionStorage.removeItem('impersonate_user_id')
             sessionStorage.removeItem('impersonate_slug')
             fetchRadioData()
