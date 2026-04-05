@@ -11,6 +11,7 @@ const RadioLogin = () => {
     const [pin, setPin] = useState('')
     const [loading, setLoading] = useState(false)
     const [radioData, setRadioData] = useState(null)
+    const [radioBrand, setRadioBrand] = useState(null)
     const [error, setError] = useState('')
     const [loadingRadio, setLoadingRadio] = useState(true)
 
@@ -38,6 +39,11 @@ const RadioLogin = () => {
             }
 
             setRadioData(data)
+
+            // FASE 3: Busca White Label Branding
+            const { data: brand } = await supabase.from('app_radios').select('*').eq('slug', slug).maybeSingle()
+            if (brand) setRadioBrand(brand)
+            
         } catch (err) {
             setError('Erro ao carregar dados da rádio.')
         } finally {
@@ -191,21 +197,32 @@ const RadioLogin = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-            <div className="bg-gray-900 rounded-3xl border border-gray-800 shadow-2xl p-8 max-w-md w-full">
+        <div className="min-h-screen flex items-center justify-center p-4 transition-colors" style={{ backgroundColor: radioBrand?.cor_padrao ? `${radioBrand.cor_padrao}15` : '#030712' }}>
+            <div className="bg-gray-900/90 backdrop-blur-xl rounded-3xl border border-gray-800 shadow-2xl p-8 max-w-md w-full relative overflow-hidden">
+                
+                {/* Efeito Glow da cor da Rádio */}
+                {radioBrand?.cor_padrao && (
+                    <div className="absolute -top-20 -left-20 w-64 h-64 blur-[100px] opacity-20 pointer-events-none" style={{ backgroundColor: radioBrand.cor_padrao }} />
+                )}
 
                 {/* Logo/Ícone da Rádio */}
                 <div className="flex justify-center mb-6">
-                    <div className="bg-purple-600/20 p-4 rounded-full">
-                        <Radio className="w-12 h-12 text-purple-400" />
-                    </div>
+                    {radioBrand?.logo_radio ? (
+                        <div className="p-2 bg-white/5 rounded-2xl border border-gray-800 shadow-lg">
+                            <img src={radioBrand.logo_radio} alt={radioBrand.nome || radioData?.nome_completo} className="h-20 object-contain" />
+                        </div>
+                    ) : (
+                        <div className="bg-purple-600/20 p-4 rounded-full" style={radioBrand?.cor_padrao ? { backgroundColor: `${radioBrand.cor_padrao}33` } : {}}>
+                            <Radio className="w-12 h-12 text-purple-400" style={radioBrand?.cor_padrao ? { color: radioBrand.cor_padrao } : {}} />
+                        </div>
+                    )}
                 </div>
 
                 {/* Nome da Rádio */}
-                <h1 className="text-2xl font-bold text-white text-center mb-2">
-                    {radioData?.nome_completo || 'Rádio'}
+                <h1 className="text-2xl font-bold text-white text-center mb-2 drop-shadow-md">
+                    {radioBrand?.nome || radioData?.nome_completo || 'Rádio'}
                 </h1>
-                <p className="text-gray-500 text-center mb-8 text-sm">
+                <p className="text-gray-500 text-center mb-8 text-sm font-medium">
                     Digite seu PIN de acesso
                 </p>
 
