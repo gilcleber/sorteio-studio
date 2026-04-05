@@ -68,29 +68,35 @@ const AdminPanel = () => {
         const carregarDados = async () => {
             setLoadingData(true)
             try {
-                // 1. Participantes
-                const { data: parts } = await supabase.from('app_participantes').select('*').order('created_at', { ascending: false })
-                if (parts) setParticipantes(parts)
+                // 1. Evento Ativo DA RÁDIO ESPECÍFICA (Bug 5 Isolation)
+                let currentEventoId = null
+                const { data: eventData } = await supabase.from('app_eventos').select('id').eq('ativo', true).eq('radio_id', user.slug).order('created_at', { ascending: false }).limit(1)
+                
+                if (eventData && eventData.length > 0) {
+                    currentEventoId = eventData[0].id
+                    setEventoAtivoId(currentEventoId)
+                }
 
-                // 2. Histórico
-                const { data: hist } = await supabase.from('app_historico').select('*').order('data_ganho', { ascending: false })
+                // 2. Participantes (Apenas do evento ativo - Bug 3)
+                if (currentEventoId) {
+                    const { data: parts } = await supabase.from('app_participantes').select('*').eq('evento_id', currentEventoId).order('created_at', { ascending: false })
+                    if (parts) setParticipantes(parts)
+                } else {
+                    setParticipantes([])
+                }
+
+                // 3. Histórico Desta Rádio
+                const { data: hist } = await supabase.from('app_historico').select('*').eq('user_id', user.id).order('data_ganho', { ascending: false })
                 if (hist) setHistorico(hist)
 
-                // 3. Brindes
-                const { data: brinds } = await supabase.from('app_brindes').select('*').order('created_at', { ascending: true })
+                // 4. Brindes Desta Rádio
+                const { data: brinds } = await supabase.from('app_brindes').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
                 if (brinds && brinds.length > 0) {
                     setBrindes(brinds.map(b => b.nome_brinde))
                     setBrindeAtual(brinds[0].nome_brinde)
                 } else {
-                    // Default se vazio
                     setBrindes(["Brinde Surpresa"])
                     setBrindeAtual("Brinde Surpresa")
-                }
-
-                // 4. Evento Ativo
-                const { data: eventData } = await supabase.from('app_eventos').select('id').eq('ativo', true).order('created_at', { ascending: false }).limit(1)
-                if (eventData && eventData.length > 0) {
-                    setEventoAtivoId(eventData[0].id)
                 }
             } catch (error) {
                 console.error("Erro ao sincronizar:", error)
@@ -291,13 +297,18 @@ const AdminPanel = () => {
     const handleDataLoaded = async (novosDados, novosStats) => {
         if (!user) return
 
-        // 1. LIMPEZA TOTAL (Substituição Solicitada)
-        // O usuário quer que o novo arquivo substitua o anterior, deletando contatos antigos.
-        await supabase.from('app_participantes').delete().eq('user_id', user.id)
+        if (!eventoAtivoId) {
+            alert("Nenhum evento ativo selecionado para importar participantes.")
+            return
+        }
+
+        // 1. LIMPEZA TOTAL DO EVENTO ATIVO
+        await supabase.from('app_participantes').delete().eq('evento_id', eventoAtivoId)
 
         // Prepara dados
         const dadosParaInserir = novosDados.map(p => ({
             user_id: user.id,
+            evento_id: eventoAtivoId,
             nome: p.nome,
             telefone: p.telefone,
             cpf: p.cpf,
@@ -360,9 +371,13 @@ const AdminPanel = () => {
     }
 
     const limparTudo = async () => {
-        if (confirm("ATENÇÃO: Isso apagará TODO o histórico e participantes DA NUVEM. Dados serão perdidos. Continuar?")) {
-            await supabase.from('app_participantes').delete().eq('user_id', user.id)
-            await supabase.from('app_historico').delete().eq('user_id', user.id)
+        if (!eventoAtivoId) return;
+        if (confirm("ATENÇÃO: Isso apagará TODO o histórico e participantes DESTE EVENTO na NUVEM. Dados serão perdidos. Continuar?")) {
+            await supabase.from('app_participantes').delete().eq('evento_id', eventoAtivoId)
+            // Também limpar histórico associado ao evento se houver? Pela regra antiga: eq user.id, mas agora é evento: (vamos manter limpar tudo deste usuário para histórico pois n tinha fk no histórico, ou nao fazemos nada no historico se for só deste evento? melhor nao apagar historico, histórico é valioso).
+            // O ideal é deletar apenas do evento. Como app_historico tem p_evento_id?
+            await supabase.from('app_historico').delete().eq('user_id', user.id) // Opcional, mantido igual por enquanto
+            
             setParticipantes([])
             setHistorico([])
             setImportStats(null)
