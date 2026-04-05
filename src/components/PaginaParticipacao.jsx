@@ -5,6 +5,21 @@ import { motion } from 'framer-motion'
 import { Trophy, Gift, ArrowRight, CheckCircle2, User, Phone, MapPin, Hash, AtSign, Instagram } from 'lucide-react'
 import confetti from 'canvas-confetti'
 
+const mascaraTelefone = (v) => {
+    v = v.replace(/\D/g, "")
+    v = v.replace(/^(\d{2})(\d)/g, "($1) $2")
+    v = v.replace(/(\d)(\d{4})$/, "$1-$2")
+    return v.substring(0, 15)
+}
+
+const mascaraCPF = (v) => {
+    v = v.replace(/\D/g, "")
+    v = v.replace(/(\d{3})(\d)/, "$1.$2")
+    v = v.replace(/(\d{3})(\d)/, "$1.$2")
+    v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+    return v.substring(0, 14)
+}
+
 export default function PaginaParticipacao() {
     const { slug } = useParams()
     const [sorteio, setSorteio] = useState(null)
@@ -53,6 +68,20 @@ export default function PaginaParticipacao() {
     const handleSubmit = async (e) => {
         e.preventDefault()
         setEnviando(true)
+
+        // 1. ESCUDO ANTI-FRAUDE: Verifica duplicidade
+        let orQuery = `telefone.eq.${formData.telefone}`;
+        if (formData.cpf && formData.cpf.trim() !== '') {
+            orQuery += `,cpf.eq.${formData.cpf}`;
+        }
+
+        const { data: existData } = await supabase.from('app_participantes').select('id').eq('evento_id', sorteio.id).or(orQuery);
+
+        if (existData && existData.length > 0) {
+            alert("Você já está concorrendo! Boa sorte!");
+            setEnviando(false);
+            return;
+        }
 
         const payload = {
             evento_id: sorteio.id,
@@ -173,7 +202,7 @@ export default function PaginaParticipacao() {
                                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block group-focus-within:text-[var(--corTema)] transition-colors" style={{ '--corTema': corTema }}>{getFieldLabel('telefone', 'WhatsApp *')}</label>
                                         <div className="relative">
                                             <Phone className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--corTema)] transition-colors" style={{ '--corTema': corTema }} />
-                                            <input required value={formData.telefone} onChange={e => setFormData({...formData, telefone: e.target.value})} type="tel" className="w-full bg-white border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 outline-none transition-all font-semibold text-gray-800 placeholder-gray-300 shadow-sm" onFocus={(e)=> { e.target.style.borderColor = corTema; e.target.style.boxShadow = `0 0 0 4px ${corTema}25` }} onBlur={(e)=> { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }} placeholder="(00) 90000-0000" />
+                                            <input required value={formData.telefone} onChange={e => setFormData({...formData, telefone: mascaraTelefone(e.target.value)})} type="tel" className="w-full bg-white border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 outline-none transition-all font-semibold text-gray-800 placeholder-gray-300 shadow-sm" onFocus={(e)=> { e.target.style.borderColor = corTema; e.target.style.boxShadow = `0 0 0 4px ${corTema}25` }} onBlur={(e)=> { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }} placeholder="(00) 00000-0000" />
                                         </div>
                                     </div>
 
@@ -192,7 +221,7 @@ export default function PaginaParticipacao() {
                                         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block group-focus-within:text-[var(--corTema)] transition-colors" style={{ '--corTema': corTema }}>{getFieldLabel('cpf', 'CPF')}</label>
                                         <div className="relative">
                                             <Hash className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--corTema)] transition-colors" style={{ '--corTema': corTema }} />
-                                            <input value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} type="text" className="w-full bg-white border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 outline-none transition-all font-semibold text-gray-800 placeholder-gray-300 shadow-sm" onFocus={(e)=> { e.target.style.borderColor = corTema; e.target.style.boxShadow = `0 0 0 4px ${corTema}25` }} onBlur={(e)=> { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }} placeholder="000.000.000-00" />
+                                            <input value={formData.cpf} onChange={e => setFormData({...formData, cpf: mascaraCPF(e.target.value)})} type="text" className="w-full bg-white border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-3.5 outline-none transition-all font-semibold text-gray-800 placeholder-gray-300 shadow-sm" onFocus={(e)=> { e.target.style.borderColor = corTema; e.target.style.boxShadow = `0 0 0 4px ${corTema}25` }} onBlur={(e)=> { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }} placeholder="000.000.000-00" />
                                         </div>
                                     </div>
                                 )}
