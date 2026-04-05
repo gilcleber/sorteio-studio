@@ -28,4 +28,5 @@ USING (true);
 -- Para iniciar a tabela app_radios a partir dos profiles existentes:
 INSERT INTO public.app_radios (nome, slug)
 SELECT nome_completo, slug FROM public.profiles 
+WHERE slug IS NOT NULL
 ON CONFLICT (slug) DO NOTHING;
