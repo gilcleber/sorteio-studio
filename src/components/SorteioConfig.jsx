@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { supabase } from '../services/supabaseClient'
 import QRCodeDisplay from './QRCodeDisplay'
 import PatrocinadorPanel from './PatrocinadorPanel'
@@ -159,7 +160,20 @@ export default function SorteioConfig({ user }) {
                                <h3 className="font-bold text-center text-gray-300 uppercase tracking-widest text-xs">Visão do Público / Escaneie</h3>
                                
                                <div className="bg-white p-3 rounded-xl shadow-[0_0_50px_rgba(255,255,255,0.1)]">
-                                   <img src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://sorteio-studio.vercel.app/#/participar/${sorteioAtivo.slug}`)}`} alt="QR Code do Sorteio" className="w-48 h-48" />
+                                   <QRCodeCanvas 
+                                        value={`${baseURL}/#/participar/${sorteioAtivo.slug}`} 
+                                        size={200} 
+                                        level={"H"} 
+                                   />
+                                   <div className="hidden">
+                                        <QRCodeCanvas 
+                                            id="qr-download-canvas"
+                                            value={`${baseURL}/#/participar/${sorteioAtivo.slug}`} 
+                                            size={1000} 
+                                            level={"H"} 
+                                            marginSize={4}
+                                        />
+                                   </div>
                                </div>
 
                                <div className="text-center w-full max-w-[280px]">
@@ -182,15 +196,23 @@ export default function SorteioConfig({ user }) {
                                         >
                                             Copiar Link
                                         </button>
-                                        <a 
-                                            href={`https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(`${baseURL}/#/participar/${sorteioAtivo.slug}`)}`}
-                                            download="qrcode_sorteio"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                        <button 
+                                            onClick={() => {
+                                                const canvas = document.getElementById('qr-download-canvas');
+                                                if(canvas) {
+                                                    const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+                                                    let downloadLink = document.createElement("a");
+                                                    downloadLink.href = pngUrl;
+                                                    downloadLink.download = `qrcode_${sorteioAtivo.slug}.png`;
+                                                    document.body.appendChild(downloadLink);
+                                                    downloadLink.click();
+                                                    document.body.removeChild(downloadLink);
+                                                }
+                                            }}
                                             className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2.5 px-3 rounded-lg text-center shadow-lg transition-all"
                                         >
                                             Baixar QR Code
-                                        </a>
+                                        </button>
                                    </div>
 
                                    <div className="bg-green-900/30 border border-green-500/30 p-2.5 rounded-xl flex items-center justify-center gap-3">
