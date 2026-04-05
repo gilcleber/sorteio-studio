@@ -60,6 +60,7 @@ function App() {
             <Routes>
               {/* Rotas Públicas */}
               <Route path="/telao" element={<PublicDisplay />} />
+              <Route path="/telao/:evento_id" element={<PublicDisplay />} />
               <Route path="/participar/:slug" element={<PaginaParticipacao />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

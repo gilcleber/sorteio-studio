@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Trophy, Gift, Users } from 'lucide-react'
 import { supabase } from '../services/supabaseClient'
 
 const PublicDisplay = () => {
+    const { evento_id } = useParams()
     const [nomeAtual, setNomeAtual] = useState("Aguardando Início...")
     const [ganhador, setGanhador] = useState(null)
     const [isSorteando, setIsSorteando] = useState(false)
@@ -64,12 +66,18 @@ const PublicDisplay = () => {
     }, [])
 
     const carregarMetadados = async () => {
-        // Tenta achar evento Master Ativo (na tabela nativa)
-        const { data: sData } = await supabase.from('app_eventos')
-           .select('*')
-           .eq('ativo', true)
-           .order('created_at', { ascending: false })
-           .limit(1)
+        let sData = null;
+        if (evento_id) {
+            const { data } = await supabase.from('app_eventos').select('*').eq('id', evento_id).limit(1);
+            sData = data;
+        } else {
+            const { data } = await supabase.from('app_eventos')
+               .select('*')
+               .eq('ativo', true)
+               .order('created_at', { ascending: false })
+               .limit(1);
+            sData = data;
+        }
 
         if (sData && sData.length > 0) {
             const trg = sData[0]

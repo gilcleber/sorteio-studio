@@ -23,6 +23,7 @@ const AdminPanel = () => {
     const [historico, setHistorico] = useState([])
     const [brindes, setBrindes] = useState([])
     const [brindeAtual, setBrindeAtual] = useState("Carregando...")
+    const [eventoAtivoId, setEventoAtivoId] = useState(null)
 
     // Estados locais (Configurações simples podem ficar locais por enquanto ou localStorage)
     const [importStats, setImportStats] = useState(null)
@@ -39,7 +40,7 @@ const AdminPanel = () => {
     const [showImportador, setShowImportador] = useState(false)
 
     // Configurações (Mantidas local por preferência de sessão)
-    const [duracao, setDuracao] = useState(10)
+    const [duracao, setDuracao] = useState(3)
     const [velocidade, setVelocidade] = useState(50)
     const [volume, setVolume] = useState(true)
 
@@ -82,6 +83,12 @@ const AdminPanel = () => {
                     // Default se vazio
                     setBrindes(["Brinde Surpresa"])
                     setBrindeAtual("Brinde Surpresa")
+                }
+
+                // 4. Evento Ativo
+                const { data: eventData } = await supabase.from('app_eventos').select('id').eq('ativo', true).order('created_at', { ascending: false }).limit(1)
+                if (eventData && eventData.length > 0) {
+                    setEventoAtivoId(eventData[0].id)
                 }
             } catch (error) {
                 console.error("Erro ao sincronizar:", error)
@@ -201,7 +208,8 @@ const AdminPanel = () => {
             // ---> MIGRAÇÃO: LOGICA MOVIDA PARA UMA RPC TOTALMENTE SEGURA NO SUPABASE
             const { data: ganhadorFinal, error } = await supabase.rpc('executar_sorteio_seguro', {
                 p_user_id: user.id,
-                p_brinde: brindeAtual
+                p_brinde: brindeAtual,
+                p_evento_id: eventoAtivoId
             })
 
             if (error || !ganhadorFinal) {
@@ -380,7 +388,7 @@ const AdminPanel = () => {
                         <PenTool className="w-4 h-4" /> Forms
                     </button>
 
-                    <Link to="/telao" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-bold shadow-lg shadow-purple-900/20">
+                    <Link to={`/telao${eventoAtivoId ? `/${eventoAtivoId}` : ''}`} target="_blank" className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-bold shadow-lg shadow-purple-900/20">
                         <MonitorPlay className="w-4 h-4" /> Telão
                     </Link>
 
