@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
             setLicense(licenseData)
 
             // Role Source of Truth (Database)
-            const role = profile?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com' 
+            let role = profile?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com' 
                 ? 'super_admin' 
                 : 'radio_admin'
 
@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }) => {
                 if (impId) {
                     finalUserId = impId
                     finalSlug = impSlug
+                    role = 'radio_admin' // O Master 'vira' um radio no frontend desta aba!
                 }
             }
 
