@@ -107,7 +107,7 @@ const AdminPanel = () => {
         }
 
         carregarDados()
-    }, [user])
+    }, [user, viewMode])
 
     // --- CANAL DE COMUNICAÇÃO ---
     useEffect(() => {

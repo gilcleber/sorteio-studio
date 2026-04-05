@@ -3,7 +3,7 @@ import { QRCodeCanvas } from 'qrcode.react'
 import { supabase } from '../services/supabaseClient'
 import QRCodeDisplay from './QRCodeDisplay'
 import PatrocinadorPanel from './PatrocinadorPanel'
-import { Save, RadioReceiver } from 'lucide-react'
+import { Save, RadioReceiver, Plus, Check, Archive, Edit3 } from 'lucide-react'
 
 export default function SorteioConfig({ user }) {
    const [titulo, setTitulo] = useState("Meu Grande Sorteio")
@@ -13,6 +13,7 @@ export default function SorteioConfig({ user }) {
    const [premioSel, setPremioSel] = useState("")
    
    const [brindes, setBrindes] = useState([])
+   const [todosSorteios, setTodosSorteios] = useState([])
    const [sorteioAtivo, setSorteioAtivo] = useState(null)
    const [loading, setLoading] = useState(false)
    const [partCount, setPartCount] = useState(0)
@@ -33,33 +34,73 @@ export default function SorteioConfig({ user }) {
        const { data: sData } = await supabase.from('app_eventos')
            .select('*')
            .eq('radio_id', user.slug)
-           .eq('ativo', true)
            .order('created_at', { ascending: false })
-           .limit(1)
 
-       if (sData && sData.length > 0) {
-           preencheForm(sData[0], bData || [])
+       if (sData) {
+           setTodosSorteios(sData)
+           const ativo = sData.find(s => s.ativo === true)
+           if (ativo) {
+               preencheForm(ativo, bData || [])
+           } else {
+               limparForm()
+           }
        }
    }
 
    const preencheForm = (s, brindesLoad) => {
        setSorteioAtivo(s)
-       setTitulo(s.titulo || (s.slug ? s.slug.split('-').slice(0,-1).join(' ').toUpperCase() : "Sorteio " + new Date().toLocaleDateString()))
+       setTitulo(s.titulo || "")
        if (s.data_sorteio) setDataSorteio(s.data_sorteio.slice(0, 16))
+       else setDataSorteio("")
        setTipo(s.modo || "unico")
        setQtd(s.qtd_ganhadores || 1)
        
-       const brindeObj = brindesLoad.find(b => b.id === s.premio_id)
+       const bList = (brindesLoad && brindesLoad.length > 0) ? brindesLoad : brindes
+       const brindeObj = bList.find(b => b.id === s.premio_id)
        setPremioSel(brindeObj ? brindeObj.nome_brinde : "")
+   }
+
+   const limparForm = () => {
+       setSorteioAtivo(null)
+       setTitulo("Sorteio " + new Date().toLocaleDateString())
+       setDataSorteio("")
+       setTipo("unico")
+       setQtd(1)
+       setPremioSel("")
+       setPartCount(0)
+   }
+
+   const ativarEvento = async (id) => {
+       setLoading(true)
+       try {
+           await supabase.from('app_eventos').update({ ativo: false }).eq('radio_id', user.slug)
+           const { error } = await supabase.from('app_eventos').update({ ativo: true }).eq('id', id)
+           if (error) throw error
+           await carregaBasics()
+           alert("Sorteio ativado!")
+       } catch (err) {
+           alert("Erro ao ativar: " + err.message)
+       } finally {
+           setLoading(false)
+       }
+   }
+
+   const arquivarEvento = async (id) => {
+       if (!confirm("Arquivar este sorteio? ele sairá da lista principal.")) return
+       try {
+           const { error } = await supabase.from('app_eventos').update({ ativo: false }).eq('id', id)
+           if (error) throw error
+           await carregaBasics()
+       } catch (err) {
+           alert("Erro ao arquivar: " + err.message)
+       }
    }
 
    const salvarOuCriar = async () => {
        if (!premioSel) return alert("Por favor, selecione qual prêmio será sorteado.")
        
        setLoading(true)
-       // Gera slug baseada no titulo com random hash no final pra unicidade
        const baseSlug = titulo.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random()*10000)
-       
        const novoSlug = sorteioAtivo?.slug || baseSlug;
        
        const objPremio = brindes.find(b => b.nome_brinde === premioSel);
@@ -76,30 +117,27 @@ export default function SorteioConfig({ user }) {
            ativo: true
        }
        
-       setSorteioAtivo(prev => ({ ...prev, ...payload }));
-
        let dbError = null;
        if (sorteioAtivo) {
            const { error } = await supabase.from('app_eventos').update(payload).eq('id', sorteioAtivo.id)
            dbError = error;
        } else {
+           await supabase.from('app_eventos').update({ ativo: false }).eq('radio_id', user.slug)
            const { error } = await supabase.from('app_eventos').insert(payload)
            dbError = error;
        }
        
        setLoading(false)
-       
-       if (dbError) {
-           alert("Bloqueio de Servidor: Suas edições não puderam ser salvas no Banco de Dados. Entre em contato com o suporte. Detalhe: " + dbError.message);
-           return;
-       }
-
-       const btn = document.getElementById('btn-salvar-evento');
-       if (btn) {
-           const old = btn.innerHTML;
-           btn.innerHTML = '✅ Dados Salvos e Evento Pronto!';
-           btn.classList.add('bg-green-600');
-           setTimeout(() => { btn.innerHTML = old; btn.classList.remove('bg-green-600') }, 3500);
+       if (!dbError) {
+           await carregaBasics()
+           const btn = document.getElementById('btn-salvar-evento');
+           if (btn) {
+               const old = btn.innerHTML;
+               btn.innerHTML = '✅ Dados Salvos!';
+               setTimeout(() => { btn.innerHTML = old; }, 3500);
+           }
+       } else {
+           alert("Erro ao salvar: " + dbError.message);
        }
    }
 
@@ -108,16 +146,23 @@ export default function SorteioConfig({ user }) {
    return (
        <div className="space-y-6">
            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-2xl">
-               <div className="flex items-center gap-3 mb-6 border-b border-gray-800 pb-4">
-                   <RadioReceiver className="w-6 h-6 text-indigo-500" />
-                   <div>
-                       <h2 className="text-xl font-black text-white">Configuração do Evento</h2>
-                       <p className="text-xs text-gray-400">Monte o seu sorteio live, defina link e prêmios.</p>
+               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-gray-800 pb-4">
+                   <div className="flex items-center gap-3">
+                       <RadioReceiver className="w-6 h-6 text-indigo-500" />
+                       <div>
+                           <h2 className="text-xl font-black text-white">Configuração do Evento</h2>
+                           <p className="text-xs text-gray-400">Monte o seu sorteio live, defina link e prêmios.</p>
+                       </div>
                    </div>
+                   <button 
+                       onClick={limparForm}
+                       className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-xs font-bold border border-gray-700 flex items-center gap-2"
+                   >
+                       <Plus className="w-4 h-4" /> Criar Novo Sorteio
+                   </button>
                </div>
 
                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                   {/* Lado Esquerdo: Parametros */}
                    <div className="space-y-4">
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Título da Campanha</label>
@@ -153,7 +198,6 @@ export default function SorteioConfig({ user }) {
                         <button id="btn-salvar-evento" disabled={loading} onClick={salvarOuCriar} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 shadow-lg hover:-translate-y-0.5 transition-all mt-4"><Save className="w-5 h-5"/> SALVAR DADOS DO SORTEIO</button>
                    </div>
 
-                   {/* Lado Direito: QRCode Sharing e Public Link */}
                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-800 rounded-xl p-6 bg-black/50">
                        {sorteioAtivo?.slug ? (
                            <div className="w-full flex flex-col items-center gap-5 animate-in fade-in zoom-in duration-500">
@@ -188,11 +232,9 @@ export default function SorteioConfig({ user }) {
                                                 const btn = e.currentTarget;
                                                 const oldText = btn.innerHTML;
                                                 btn.innerHTML = '✅ Copiado!';
-                                                btn.classList.add('bg-green-600', 'text-white');
-                                                btn.classList.remove('bg-indigo-600');
-                                                setTimeout(()=> { btn.innerHTML = oldText; btn.classList.remove('bg-green-600', 'text-white'); btn.classList.add('bg-indigo-600'); }, 2000)
+                                                setTimeout(()=> { btn.innerHTML = oldText; }, 2000)
                                             }}
-                                            className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg shadow-lg transition-all"
+                                            className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg"
                                         >
                                             Copiar Link
                                         </button>
@@ -200,18 +242,16 @@ export default function SorteioConfig({ user }) {
                                             onClick={() => {
                                                 const canvas = document.getElementById('qr-download-canvas');
                                                 if(canvas) {
-                                                    const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+                                                    const pngUrl = canvas.toDataURL("image/png")
                                                     let downloadLink = document.createElement("a");
                                                     downloadLink.href = pngUrl;
                                                     downloadLink.download = `qrcode_${sorteioAtivo.slug}.png`;
-                                                    document.body.appendChild(downloadLink);
                                                     downloadLink.click();
-                                                    document.body.removeChild(downloadLink);
                                                 }
                                             }}
-                                            className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2.5 px-3 rounded-lg text-center shadow-lg transition-all"
+                                            className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2.5 px-3 rounded-lg text-center shadow-lg"
                                         >
-                                            Baixar QR Code
+                                            Baixar QR
                                         </button>
                                    </div>
 
@@ -233,8 +273,57 @@ export default function SorteioConfig({ user }) {
                </div>
            </div>
 
-           {/* Patrocinadores vinculados a este sorteio exato */}
            <PatrocinadorPanel sorteioId={sorteioAtivo?.id} />
+
+           {/* LISTA DE SORTEIOS - HISTÓRICO */}
+           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-2xl mt-10">
+               <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">📚 Seus Sorteios</h3>
+               <div className="overflow-x-auto">
+                   <table className="w-full text-left">
+                       <thead>
+                           <tr className="border-b border-gray-800 text-[10px] text-gray-500 uppercase font-black">
+                               <th className="pb-4">Sorteio</th>
+                               <th className="pb-4">Data</th>
+                               <th className="pb-4">Status</th>
+                               <th className="pb-4 text-right pr-4">Ações</th>
+                           </tr>
+                       </thead>
+                       <tbody className="divide-y divide-gray-800/50">
+                           {todosSorteios.map(s => (
+                               <tr key={s.id} className={`group ${s.ativo ? 'bg-indigo-900/10' : ''}`}>
+                                   <td className="py-4">
+                                       <p className="font-bold text-sm text-white">{s.titulo}</p>
+                                       <p className="text-[10px] text-gray-500 font-mono">/{s.slug}</p>
+                                   </td>
+                                   <td className="py-4 text-xs text-gray-400">
+                                       {s.data_sorteio ? new Date(s.data_sorteio).toLocaleDateString() : '-'}
+                                   </td>
+                                   <td className="py-4">
+                                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${s.ativo ? 'bg-green-600/20 text-green-400 border-green-600/50' : 'bg-gray-800 text-gray-500 border-gray-700'}`}>
+                                           {s.ativo ? 'ATUAL' : 'INATIVO'}
+                                       </span>
+                                   </td>
+                                   <td className="py-4 text-right pr-4">
+                                       <div className="flex justify-end gap-2">
+                                           {!s.ativo && (
+                                               <button onClick={() => ativarEvento(s.id)} className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-[10px] font-bold border border-green-600/30 flex items-center gap-1 transition-all">
+                                                   <Check className="w-3 h-3" /> Ativar
+                                               </button>
+                                           )}
+                                           <button onClick={() => { preencheForm(s, brindes); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded text-[10px] font-bold border border-gray-700 flex items-center gap-1 transition-all">
+                                               <Edit3 className="w-3 h-3" /> Editar
+                                           </button>
+                                           <button onClick={() => arquivarEvento(s.id)} className="text-[10px] font-bold text-red-500 hover:bg-red-900/20 px-3 py-1 rounded flex items-center gap-1 transition-all border border-red-900/30">
+                                               <Archive className="w-3 h-3" /> Arquivar
+                                           </button>
+                                       </div>
+                                   </td>
+                               </tr>
+                           ))}
+                       </tbody>
+                   </table>
+               </div>
+           </div>
        </div>
    )
 }
