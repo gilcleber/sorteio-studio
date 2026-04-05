@@ -25,6 +25,7 @@ const AdminPanel = () => {
     const [brindes, setBrindes] = useState([])
     const [brindeAtual, setBrindeAtual] = useState("Carregando...")
     const [eventoAtivoId, setEventoAtivoId] = useState(null)
+    const [toasts, setToasts] = useState([])
 
     // Estados locais (Configurações simples podem ficar locais por enquanto ou localStorage)
     const [importStats, setImportStats] = useState(null)
@@ -142,6 +143,36 @@ const AdminPanel = () => {
         setIsModoEspera(!isModoEspera)
         channelRef.current.postMessage({ type: isModoEspera ? 'STOP_IDLE' : 'START_IDLE' })
     }
+
+    // --- REAL-TIME LISTENER (NOVO) ---
+    useEffect(() => {
+        const channel = supabase.channel('realtime:admin_participantes')
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'app_participantes'
+            }, (payload) => {
+                const newPart = payload.new;
+                
+                // Apenas atualizar se pertencer ao evento atual
+                if (eventoAtivoId && newPart.evento_id && newPart.evento_id !== eventoAtivoId) return;
+
+                setParticipantes(prev => [newPart, ...prev]);
+
+                // Toast Notification
+                const toastId = Math.random().toString(36).substr(2, 9);
+                setToasts(prev => [...prev, { id: toastId, nome: newPart.nome, cidade: newPart.cidade }]);
+                
+                setTimeout(() => {
+                    setToasts(current => current.filter(t => t.id !== toastId));
+                }, 4500);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        }
+    }, [eventoAtivoId]);
 
     // --- SORTEIO (AGORA SERVER-SIDE & COM UX AUMENTADA) ---
     const loopSorteio = (startTime) => {
@@ -790,6 +821,31 @@ const AdminPanel = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* TOASTS REAL-TIME */}
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-3 pointer-events-none">
+                <AnimatePresence>
+                    {toasts.map(t => (
+                        <motion.div 
+                            key={t.id}
+                            initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                            className="bg-gray-900 border border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.15)] rounded-xl p-3 flex items-center gap-3 w-72 pointer-events-auto overflow-hidden relative"
+                        >
+                            <div className="absolute top-0 left-0 w-1 h-full bg-green-500" />
+                            <div className="bg-green-900/30 text-green-400 p-2 rounded-full shadow-inner ml-1">
+                                <Zap className="w-5 h-5 animate-pulse" />
+                            </div>
+                            <div className="flex flex-col flex-1 overflow-hidden pt-0.5">
+                                <span className="text-[9px] uppercase font-black text-green-500 tracking-wider">Novo Participante!</span>
+                                <span className="text-sm font-bold text-white truncate leading-tight mt-0.5">{t.nome}</span>
+                                {t.cidade && <span className="text-xs text-gray-400 truncate">{t.cidade}</span>}
+                            </div>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+            </div>
 
         </div>
     )
