@@ -16,12 +16,28 @@ const RadioLogin = () => {
     const [loadingRadio, setLoadingRadio] = useState(true)
 
     useEffect(() => {
-        const cleanupSession = async () => {
-            // Força logout para evitar conflito de sessão (ex: Admin logado tentando acessar rádio)
+        const checkSessionAndAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            const isMaster = session?.user?.email === 'admin@master.com' || session?.user?.email === 'gilcleberlocutor@gmail.com'
+            
+            if (isMaster) {
+                // Impersonate mode: Master becomes the radio
+                const { data: p } = await supabase.from('profiles').select('id').eq('slug', slug).single()
+                if (p) {
+                    sessionStorage.setItem('impersonate_user_id', p.id)
+                    sessionStorage.setItem('impersonate_slug', slug)
+                    window.location.href = '#/'
+                    return
+                }
+            }
+
+            // Normal flow: Força logout
             await supabase.auth.signOut()
+            sessionStorage.removeItem('impersonate_user_id')
+            sessionStorage.removeItem('impersonate_slug')
             fetchRadioData()
         }
-        cleanupSession()
+        checkSessionAndAuth()
     }, [slug])
 
     const fetchRadioData = async () => {

@@ -34,16 +34,36 @@ export const AuthProvider = ({ children }) => {
 
             setLicense(licenseData)
 
-            // Injeta isAdmin e Slug no usuário
+            // Verifica isAdmin
+            const isAdmin = profile?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com'
+            
+            let finalUserId = session.user.id
+            let finalSlug = profile?.slug
+
+            // Master Impersonation Bypass (Bugs 1 e 5)
+            if (isAdmin) {
+                const impId = sessionStorage.getItem('impersonate_user_id')
+                const impSlug = sessionStorage.getItem('impersonate_slug')
+                if (impId) {
+                    finalUserId = impId
+                    finalSlug = impSlug
+                }
+            }
+
+            // Injeta isAdmin, Slug e ID real/impersonado
             const userWithRole = {
                 ...session.user,
-                isAdmin: profile?.role === 'admin' || session.user.email === 'gilcleberlocutor@gmail.com', // Fallback de segurança
-                slug: profile?.slug // Usado como radio_id na app_eventos
+                id: finalUserId,
+                isAdmin: isAdmin,
+                slug: finalSlug,
+                realId: session.user.id // mantem backup
             }
             setUser(userWithRole)
         } else {
             setUser(null)
             setLicense(null)
+            sessionStorage.removeItem('impersonate_user_id')
+            sessionStorage.removeItem('impersonate_slug')
         }
         setLoading(false)
     }
