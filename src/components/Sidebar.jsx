@@ -186,7 +186,8 @@ const Sidebar = () => {
                                     // Pega o último evento_id se existir
                                     const eventId = localStorage.getItem('last_evento_id')
                                     const path = eventId ? `${item.path}/${eventId}` : item.path
-                                    window.open(path, '_blank')
+                                    // Adiciona o /# para compatibilidade com HashRouter na Vercel
+                                    window.open(`${window.location.origin}/#${path}`, '_blank')
                                 } else {
                                     navigate(item.path)
                                 }
