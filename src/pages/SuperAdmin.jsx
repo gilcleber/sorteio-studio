@@ -115,6 +115,30 @@ const SuperAdmin = () => {
         }
     }
 
+    const gerarNovoPin = async (userId, userSlug) => {
+        if (!confirm("Tem certeza? O PIN atual da rádio deixará de funcionar imediatamente.")) return;
+        setProcessing(userId)
+        try {
+            const numPin = Math.floor(1000 + Math.random() * 9000).toString()
+            
+            // Atualiza profiles (Local principal de autenticação)
+            const { error: err1 } = await supabase.from('profiles').update({ pin: numPin }).eq('id', userId)
+            if (err1) throw err1
+            
+            // Se a coluna existir em app_radios (fallback do pedido original) tenta atualizar lá também
+            if (userSlug) {
+               await supabase.from('app_radios').update({ pin: numPin }).eq('slug', userSlug).catch(() => {}) 
+            }
+            
+            setClients(prev => prev.map(c => c.id === userId ? { ...c, pin: numPin } : c))
+            alert(`Novo PIN gerado: ${numPin}`)
+        } catch (error) {
+            alert("Erro ao gerar novo PIN: " + error.message)
+        } finally {
+            setProcessing(null)
+        }
+    }
+
     const updateSlug = async (userId, newSlug) => {
         const { data: existing } = await supabase.from('profiles').select('id').eq('slug', newSlug).neq('id', userId).maybeSingle()
         if (existing) {
@@ -375,6 +399,14 @@ const SuperAdmin = () => {
                                                             title="Copiar PIN"
                                                         >
                                                             Copiar PIN
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); gerarNovoPin(client.id, client.slug) }}
+                                                            className="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded text-gray-300 transition-all border border-gray-600 flex items-center gap-1"
+                                                            title="Gerar Novo PIN"
+                                                            disabled={processing === client.id}
+                                                        >
+                                                            <RefreshCw className={`w-3 h-3 ${processing === client.id ? 'animate-spin' : ''}`} /> Novo PIN
                                                         </button>
                                                     </div>
                                                 )}
