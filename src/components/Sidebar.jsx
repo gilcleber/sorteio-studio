@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../services/supabaseClient'
-import { Home, Settings, DollarSign, Shield, LogOut, Radio, MonitorPlay, PenTool, List } from 'lucide-react'
+import { Home, Settings, DollarSign, Shield, LogOut, Radio, MonitorPlay, PenTool, List, Gift } from 'lucide-react'
 
 const Sidebar = () => {
     const navigate = useNavigate()
@@ -62,25 +62,25 @@ const Sidebar = () => {
         }
     ] : [
         {
-            name: '🎯 Sorteios',
+            name: '🎯 Painel Ao Vivo',
             icon: Home,
             path: '/',
             show: true
         },
         {
-            name: '⚙️ Configurações',
-            icon: Settings,
-            path: '/configuracoes',
+            name: '🎁 Criar Sorteios',
+            icon: Gift,
+            path: '/configuracoes-sorteio',
             show: true
         },
         {
-            name: '📄 Formulário',
+            name: '📄 Link e Forms',
             icon: PenTool,
             path: '/formulario',
             show: true
         },
         {
-            name: '📺 Telão',
+            name: '📺 Modo Telão',
             icon: MonitorPlay,
             path: '/telao',
             show: true,
@@ -90,6 +90,12 @@ const Sidebar = () => {
             name: '🧾 Relatórios',
             icon: List,
             path: '/relatorios',
+            show: true
+        },
+        {
+            name: '⚙️ Perfil e Cores',
+            icon: Settings,
+            path: '/configuracoes',
             show: true
         }
     ]
