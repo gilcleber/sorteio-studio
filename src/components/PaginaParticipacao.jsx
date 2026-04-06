@@ -27,6 +27,7 @@ export default function PaginaParticipacao() {
     const [brinde, setBrinde] = useState(null)
     const [patrocinadores, setPatrocinadores] = useState([])
     const [configForm, setConfigForm] = useState(null)
+    const [radioBranding, setRadioBranding] = useState(null)
     
     // UI State
     const [loading, setLoading] = useState(true)
@@ -66,11 +67,18 @@ export default function PaginaParticipacao() {
                 if (brindeData) setBrinde(brindeData)
             }
 
-            const { data: patData } = await supabase.from('app_patrocinadores').select('*').eq('evento_id', sortData.id)
-            if (patData) setPatrocinadores(patData)
+            if (sortData.patrocinadores_ids && sortData.patrocinadores_ids.length > 0) {
+                const { data: patData } = await supabase.from('app_patrocinadores').select('*').in('id', sortData.patrocinadores_ids)
+                if (patData) setPatrocinadores(patData)
+            }
 
             const { data: cfgData } = await supabase.from('app_formulario_config').select('*').eq('evento_id', sortData.id).single()
             if (cfgData) setConfigForm(cfgData)
+
+            if (sortData.radio_id) {
+                const { data: brand } = await supabase.from('app_radios').select('*').eq('slug', sortData.radio_id).maybeSingle()
+                if (brand) setRadioBranding(brand)
+            }
 
             setLoading(false)
         }
@@ -135,7 +143,7 @@ export default function PaginaParticipacao() {
     if (sorteioStatus === 'em_espera') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-purple-500 font-bold px-4 text-center"><Clock className="w-16 h-16 mb-4 text-purple-800" /> As inscrições para este Sorteio ainda não foram abertas. Volte no horário marcado! ⏰</div>
 
     const isSuccess = success
-    const corTema = configForm?.acao_pos_participacao?.corTema || '#6b21a8'
+    const corTema = radioBranding?.cor_padrao || configForm?.acao_pos_participacao?.corTema || '#6b21a8'
     const hasCustomConfig = configForm && configForm.campos && configForm.campos.length > 0
     const activeCampos = hasCustomConfig ? configForm.campos.filter(c => c.active) : []
 
@@ -171,7 +179,11 @@ export default function PaginaParticipacao() {
                     <div className="w-full p-10 text-center relative overflow-hidden flex flex-col items-center justify-center min-h-[220px]" style={{ backgroundColor: corTema, backgroundImage: `linear-gradient(135deg, ${corTema} 0%, #00000040 100%)` }}>
                         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
                         <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl -ml-16 -mb-16"></div>
-                        <Trophy className="w-16 h-16 text-yellow-300 drop-shadow-xl mb-4" />
+                        {radioBranding?.logo_radio ? (
+                            <img src={radioBranding.logo_radio} alt={radioBranding.nome} className="h-20 w-auto object-contain drop-shadow-xl mb-4" />
+                        ) : (
+                            <Trophy className="w-16 h-16 text-yellow-300 drop-shadow-xl mb-4" />
+                        )}
                         <h1 className="text-white font-black text-3xl drop-shadow-md leading-tight mt-2">{sorteio.titulo || "Sorteio Oficial"}</h1>
                         <span className="inline-block mt-3 bg-white/20 text-white text-[10px] px-3 py-1 rounded-full font-bold backdrop-blur-md uppercase tracking-wider">Válido para hoje</span>
                     </div>
@@ -284,7 +296,7 @@ export default function PaginaParticipacao() {
                             </button>
                             
                             <p className="text-[10px] text-center text-gray-400 mt-6 font-medium leading-relaxed">
-                                Oferecido por <strong className="text-gray-500 uppercase tracking-wider">{sorteio?.radio_id?.replace(/[^a-zA-Z0-9-]/g, ' ')}</strong><br/>
+                                Oferecido por <strong className="text-gray-500 uppercase tracking-wider">{radioBranding?.nome || sorteio?.radio_id?.replace(/[^a-zA-Z0-9-]/g, ' ')}</strong><br/>
                                 Ao concluir o envio você concorda com as nossas regras.
                             </p>
                         </form>
