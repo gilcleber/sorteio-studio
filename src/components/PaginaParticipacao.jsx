@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { motion } from 'framer-motion'
-import { Trophy, Gift, ArrowRight, CheckCircle2, User, Phone, MapPin, Hash, AtSign, Instagram } from 'lucide-react'
+import { Trophy, Gift, ArrowRight, CheckCircle2, User, Phone, MapPin, Hash, AtSign, Instagram, Clock } from 'lucide-react'
 import confetti from 'canvas-confetti'
 
 const mascaraTelefone = (v) => {
@@ -36,6 +36,10 @@ export default function PaginaParticipacao() {
     // Form Data
     const [formData, setFormData] = useState({ nome: '', telefone: '', email: '', cpf: '', cidade: '', instagram: '' })
     const [customFields, setCustomFields] = useState({})
+    
+    // Insta Modal State
+    const [showInstaModal, setShowInstaModal] = useState(false)
+    const [pendingPayload, setPendingPayload] = useState(null)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -46,8 +50,16 @@ export default function PaginaParticipacao() {
                 return 
             } 
             
+            
             setSorteio(sortData)
-            setSorteioStatus('ativo')
+
+            if (sortData.data_inicio && new Date() < new Date(sortData.data_inicio)) {
+                setSorteioStatus('em_espera');
+            } else if (sortData.data_fim && new Date() > new Date(sortData.data_fim)) {
+                setSorteioStatus('encerrado');
+            } else {
+                setSorteioStatus('ativo')
+            }
 
             if (sortData.premio_id) {
                 const { data: brindeData } = await supabase.from('app_brindes').select('*').eq('id', sortData.premio_id).single()
@@ -93,9 +105,17 @@ export default function PaginaParticipacao() {
         if (formData.email && formData.email.trim() !== '') payload.email = formData.email;
         if (formData.instagram && formData.instagram.trim() !== '') payload.instagram = formData.instagram;
 
-        const { error } = await supabase.from('app_participantes').insert(payload)
+        setPendingPayload(payload);
+        setShowInstaModal(true);
+        setEnviando(false);
+    }
+
+    const confirmarInscricao = async () => {
+        setEnviando(true);
+        const { error } = await supabase.from('app_participantes').insert(pendingPayload);
 
         setEnviando(false)
+        setShowInstaModal(false)
         if (!error) {
             setSuccess(true)
             confetti({
@@ -111,7 +131,8 @@ export default function PaginaParticipacao() {
 
     if (loading) return <div className="min-h-screen bg-gray-950 flex items-center justify-center font-mono text-purple-500 animate-pulse">Sincronizando Sorteio...</div>
     if (sorteioStatus === 'not_found') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-red-500 font-bold px-4 text-center"><Trophy className="w-16 h-16 mb-4 text-gray-800" /> Ops! Este Sorteio não foi encontrado ou o link é inválido. 🚫</div>
-    if (sorteioStatus === 'encerrado') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-yellow-500 font-bold px-4 text-center"><CheckCircle2 className="w-16 h-16 mb-4 text-yellow-600" /> Este Sorteio já foi encerrado e teve seu Ganhador sorteado! 🎉</div>
+    if (sorteioStatus === 'encerrado') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-yellow-500 font-bold px-4 text-center"><CheckCircle2 className="w-16 h-16 mb-4 text-yellow-600" /> Este Sorteio já foi encerrado! 🎉</div>
+    if (sorteioStatus === 'em_espera') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-purple-500 font-bold px-4 text-center"><Clock className="w-16 h-16 mb-4 text-purple-800" /> As inscrições para este Sorteio ainda não foram abertas. Volte no horário marcado! ⏰</div>
 
     const isSuccess = success
     const corTema = configForm?.acao_pos_participacao?.corTema || '#6b21a8'
@@ -301,6 +322,30 @@ export default function PaginaParticipacao() {
                     </div>
                 )}
             </motion.div>
+
+            {/* MODAL INSTAGRAM (TRAVA OBRIGATÓRIA) */}
+            {showInstaModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-sm">
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-gray-800 w-full max-w-sm rounded-[2rem] p-8 shadow-2xl border border-gray-700 text-center relative overflow-hidden">
+                        <div className="w-20 h-20 bg-gradient-to-tr from-pink-500 via-rose-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(236,72,153,0.3)]">
+                            <Instagram className="w-10 h-10 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-black text-white mb-2">Atenção: Regra Obrigatória!</h3>
+                        <p className="text-gray-400 mb-8 font-medium leading-relaxed">
+                            Para validar seu prêmio no sorteio, você <strong className="text-pink-400">DEVE</strong> estar seguindo nosso perfil no Instagram.
+                        </p>
+                        
+                        <div className="space-y-3">
+                            <a href={configForm?.acao_pos_participacao?.instagram_url || '#'} target="_blank" rel="noreferrer" className="w-full bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500 hover:opacity-90 text-white font-black py-4 px-6 rounded-2xl flex justify-center items-center gap-2 shadow-lg hover:scale-[1.02] transition-transform">
+                                <Instagram className="w-5 h-5" /> DEVE SEGUIR NO INSTAGRAM
+                            </a>
+                            <button onClick={confirmarInscricao} disabled={enviando} className="w-full bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-300 font-bold py-4 px-6 rounded-2xl transition-colors mt-2">
+                                {enviando ? "Aguarde..." : "Já realizei / Fechar"}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     )
 }
