@@ -260,10 +260,10 @@ export default function SorteioConfig({ user }) {
                         </div>
                         
                         <div className="border-t border-gray-800 pt-4 mt-2">
-                             <label className="text-xs font-bold text-gray-500 uppercase block mb-3">🤝 Selecionar Patrocinadores para este Evento</label>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-black/30 p-4 rounded-xl border border-gray-800/50">
+                             <label className="text-xs font-black text-gray-500 uppercase block mb-3 tracking-widest">🤝 Patrocinadores Selecionados</label>
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-black/40 p-1 rounded-xl border border-gray-800/50">
                                 {bancoPatrocinadores.length > 0 ? bancoPatrocinadores.map(p => (
-                                    <label key={p.id} className="flex items-center gap-3 p-2 hover:bg-gray-800 rounded-lg cursor-pointer transition-colors group">
+                                    <label key={p.id} className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border ${patSelecionados.includes(p.id) ? 'bg-indigo-600/10 border-indigo-500/50' : 'bg-transparent border-transparent hover:bg-gray-800/50'}`}>
                                         <div className="relative flex items-center justify-center">
                                             <input 
                                                 type="checkbox" 
@@ -272,17 +272,26 @@ export default function SorteioConfig({ user }) {
                                                     if (e.target.checked) setPatSelecionados([...patSelecionados, p.id]);
                                                     else setPatSelecionados(patSelecionados.filter(id => id !== p.id));
                                                 }}
-                                                className="w-5 h-5 appearance-none bg-gray-900 border-2 border-gray-700 rounded-md checked:bg-indigo-600 checked:border-indigo-600 transition-all"
+                                                className="w-5 h-5 appearance-none bg-gray-900 border-2 border-gray-700 rounded-md checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer"
                                             />
                                             {patSelecionados.includes(p.id) && <Check className="w-3 h-3 text-white absolute pointer-events-none" />}
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            {p.logo_url && <img src={p.logo_url} className="w-6 h-6 object-contain rounded bg-white p-0.5" />}
-                                            <span className="text-xs font-bold text-gray-300 group-hover:text-white transition-colors">{p.nome}</span>
+                                        <div className="flex items-center gap-3 flex-1">
+                                            {p.logo_url ? (
+                                                <img src={p.logo_url} className="w-8 h-8 object-contain rounded-lg bg-white p-1 border border-gray-700 shadow-sm" />
+                                            ) : (
+                                                <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center border border-gray-700">
+                                                    <Image className="w-4 h-4 text-gray-600" />
+                                                </div>
+                                            )}
+                                            <span className={`text-xs font-bold transition-colors ${patSelecionados.includes(p.id) ? 'text-white' : 'text-gray-400'}`}>{p.nome}</span>
                                         </div>
                                     </label>
                                 )) : (
-                                    <p className="text-[10px] text-gray-600 italic col-span-2">Nenhum patrocinador no banco. Cadastre-os abaixo no Painel de Banco.</p>
+                                    <div className="col-span-2 py-8 text-center bg-gray-900/50 rounded-lg border border-dashed border-gray-800">
+                                        <p className="text-[10px] text-gray-600 font-mono italic">Baco de patrocinadores vazio.</p>
+                                        <p className="text-[9px] text-gray-700 mt-1">Cadastre seus parceiros no painel abaixo primeiro.</p>
+                                    </div>
                                 )}
                              </div>
                         </div>
