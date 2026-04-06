@@ -22,6 +22,8 @@ export default function SorteioConfig({ user }) {
    const [dataFim, setDataFim] = useState("")
    const [filterStatus, setFilterStatus] = useState('todos')
    const [ocultarConcluidos, setOcultarConcluidos] = useState(false)
+   const [bancoPatrocinadores, setBancoPatrocinadores] = useState([])
+   const [patSelecionados, setPatSelecionados] = useState([])
 
    useEffect(() => {
        if (sorteioAtivo?.id) {
@@ -40,6 +42,9 @@ export default function SorteioConfig({ user }) {
            .select('*')
            .eq('radio_id', user.slug)
            .order('created_at', { ascending: false })
+
+       const { data: pData } = await supabase.from('app_patrocinadores').select('*').eq('radio_id', user.slug)
+       if (pData) setBancoPatrocinadores(pData)
 
        if (sData) {
            setTodosSorteios(sData)
@@ -67,6 +72,7 @@ export default function SorteioConfig({ user }) {
        const bList = (brindesLoad && brindesLoad.length > 0) ? brindesLoad : brindes
        const brindeObj = bList.find(b => b.id === s.premio_id)
        setPremioSel(brindeObj ? brindeObj.nome_brinde : "")
+       setPatSelecionados(s.patrocinadores_ids || [])
    }
 
    const limparForm = () => {
@@ -79,6 +85,7 @@ export default function SorteioConfig({ user }) {
        setQtd(1)
        setPremioSel("")
        setPartCount(0)
+       setPatSelecionados([])
    }
 
    const ativarEvento = async (id) => {
@@ -127,7 +134,8 @@ export default function SorteioConfig({ user }) {
            data_fim: dataFim ? new Date(dataFim).toISOString() : null,
            modo: tipo,
            qtd_ganhadores: qtd,
-           ativo: true
+           ativo: true,
+           patrocinadores_ids: patSelecionados
        }
        
        let dbError = null;
@@ -250,6 +258,34 @@ export default function SorteioConfig({ user }) {
                                 <input value={qtd} onChange={e=>setQtd(Number(e.target.value))} type="number" min="1" className="w-full bg-black border border-gray-800 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" />
                             </div>
                         </div>
+                        
+                        <div className="border-t border-gray-800 pt-4 mt-2">
+                             <label className="text-xs font-bold text-gray-500 uppercase block mb-3">🤝 Selecionar Patrocinadores para este Evento</label>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-black/30 p-4 rounded-xl border border-gray-800/50">
+                                {bancoPatrocinadores.length > 0 ? bancoPatrocinadores.map(p => (
+                                    <label key={p.id} className="flex items-center gap-3 p-2 hover:bg-gray-800 rounded-lg cursor-pointer transition-colors group">
+                                        <div className="relative flex items-center justify-center">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={patSelecionados.includes(p.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setPatSelecionados([...patSelecionados, p.id]);
+                                                    else setPatSelecionados(patSelecionados.filter(id => id !== p.id));
+                                                }}
+                                                className="w-5 h-5 appearance-none bg-gray-900 border-2 border-gray-700 rounded-md checked:bg-indigo-600 checked:border-indigo-600 transition-all"
+                                            />
+                                            {patSelecionados.includes(p.id) && <Check className="w-3 h-3 text-white absolute pointer-events-none" />}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {p.logo_url && <img src={p.logo_url} className="w-6 h-6 object-contain rounded bg-white p-0.5" />}
+                                            <span className="text-xs font-bold text-gray-300 group-hover:text-white transition-colors">{p.nome}</span>
+                                        </div>
+                                    </label>
+                                )) : (
+                                    <p className="text-[10px] text-gray-600 italic col-span-2">Nenhum patrocinador no banco. Cadastre-os abaixo no Painel de Banco.</p>
+                                )}
+                             </div>
+                        </div>
 
                         <button id="btn-salvar-evento" disabled={loading} onClick={salvarOuCriar} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 shadow-lg hover:-translate-y-0.5 transition-all mt-4"><Save className="w-5 h-5"/> SALVAR DADOS DO SORTEIO</button>
                    </div>
@@ -329,7 +365,7 @@ export default function SorteioConfig({ user }) {
                </div>
            </div>
 
-           <PatrocinadorPanel sorteioId={sorteioAtivo?.id} />
+           <PatrocinadorPanel radioSlug={user.slug} />
 
            {/* LISTA DE SORTEIOS - HISTÓRICO */}
            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-2xl mt-10">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { Plus, Trash2, Image, Edit2 } from 'lucide-react'
 
-export default function PatrocinadorPanel({ sorteioId }) {
+export default function PatrocinadorPanel({ radioSlug }) {
   const [patrocinadores, setPatrocinadores] = useState([])
   const [nome, setNome] = useState("")
   const [logo, setLogo] = useState("")
@@ -10,18 +10,18 @@ export default function PatrocinadorPanel({ sorteioId }) {
   const [editandoId, setEditandoId] = useState(null)
 
   useEffect(() => {
-      if(sorteioId) carregar()
-  }, [sorteioId])
+      if(radioSlug) carregar()
+  }, [radioSlug])
 
   const carregar = async () => {
-      const { data } = await supabase.from('app_patrocinadores').select('*').eq('evento_id', sorteioId)
+      const { data } = await supabase.from('app_patrocinadores').select('*').eq('radio_id', radioSlug)
       if (data) setPatrocinadores(data)
   }
 
   const salvarOuEditar = async () => {
       if (!nome) return alert("O Nome ou Marca do patrocinador é obrigatório!")
       const payload = { 
-          evento_id: sorteioId, 
+          radio_id: radioSlug, 
           nome,
           logo_url: logo || null,
           link: link || null
@@ -56,12 +56,12 @@ export default function PatrocinadorPanel({ sorteioId }) {
       carregar()
   }
 
-  if (!sorteioId) return <div className="text-gray-500 text-sm text-center py-6 border-2 border-dashed border-gray-800 rounded-xl bg-gray-900/50">⚠️ Por favor, salve ou crie o Evento de Sorteio acima ANTES de tentar vincular cotas de patrocínio a ele.</div>
+  if (!radioSlug) return <div className="text-gray-500 text-sm text-center py-6 border-2 border-dashed border-gray-800 rounded-xl bg-gray-900/50">⚠️ Erro ao carregar rádio identificada.</div>
 
   return (
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-lg">
-         <h3 className="text-lg font-bold text-white mb-1">Cotas de Patrocínio / Apoiadores</h3>
-         <p className="text-xs text-gray-500 mb-5">Estas marcas aparecerão brilhando pro seu público no Celular e no Telão Ao Vivo.</p>
+         <h3 className="text-lg font-bold text-white mb-1">🏦 Banco de Patrocinadores (Global)</h3>
+         <p className="text-xs text-gray-500 mb-5">Cadastre seus patrocinadores aqui uma única vez. Depois, escolha quais deles participam em cada sorteio específico.</p>
          
          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 bg-black p-4 rounded-xl border border-gray-800">
             <input value={nome} onChange={e=>setNome(e.target.value)} type="text" placeholder="Nome da Marca *" className="bg-gray-900 border border-gray-700/50 rounded-lg px-3 py-2.5 text-sm outline-none text-white focus:border-purple-500" />
