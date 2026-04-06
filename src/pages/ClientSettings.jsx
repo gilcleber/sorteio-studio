@@ -28,35 +28,27 @@ const ClientSettings = () => {
 
     const fetchSettings = async () => {
         try {
-            const { data, error } = await supabase
-                .from('radio_settings')
-                .select('*')
-                .eq('user_id', user.id)
-                .single()
+            // Primeiro busca o slug do perfil vinculado ao usuário
+            const { data: profile } = await supabase.from('profiles').select('slug').eq('id', user.id).single()
+            
+            if (profile?.slug) {
+                const { data, error } = await supabase
+                    .from('app_radios')
+                    .select('*')
+                    .eq('slug', profile.slug)
+                    .maybeSingle()
 
-            if (error && error.code !== 'PGRST116') throw error
+                if (error) throw error
 
-            if (data) {
-                setSettings(data)
-                setLogoPreview(data.logo_url || '')
-            } else {
-                // Se não existe, criar registro padrão
-                const defaultSettings = {
-                    user_id: user.id,
-                    slogan: '',
-                    logo_url: null,
-                    primary_color: '#3f197f',
-                    secondary_color: '#ffffff'
-                }
-
-                const { data: newData, error: insertError } = await supabase
-                    .from('radio_settings')
-                    .insert(defaultSettings)
-                    .select()
-                    .single()
-
-                if (!insertError && newData) {
-                    setSettings(newData)
+                if (data) {
+                    setSettings({
+                        nome: data.nome || '',
+                        slogan: '', // app_radios não tem slogan
+                        logo_url: data.logo_radio || '',
+                        primary_color: data.cor_padrao || '#3f197f',
+                        secondary_color: '#ffffff'
+                    })
+                    setLogoPreview(data.logo_radio || '')
                 }
             }
         } catch (err) {
@@ -70,21 +62,17 @@ const ClientSettings = () => {
         const file = e.target.files[0]
         if (!file) return
 
-        // Validar tipo de arquivo
         if (!file.type.startsWith('image/')) {
             setMessage({ type: 'error', text: 'Apenas imagens são permitidas' })
             return
         }
 
-        // Validar tamanho (max 2MB)
         if (file.size > 2 * 1024 * 1024) {
             setMessage({ type: 'error', text: 'Imagem muito grande. Máximo 2MB' })
             return
         }
 
         setLogoFile(file)
-
-        // Preview
         const reader = new FileReader()
         reader.onloadend = () => {
             setLogoPreview(reader.result)
@@ -97,12 +85,10 @@ const ClientSettings = () => {
 
         setUploading(true)
         try {
-            // Nome único para o arquivo
             const fileExt = logoFile.name.split('.').pop()
             const fileName = `${user.id}/logo-${Date.now()}.${fileExt}`
 
-            // Upload para Supabase Storage
-            const { data, error } = await supabase.storage
+            const { error } = await supabase.storage
                 .from('radio-logos')
                 .upload(fileName, logoFile, {
                     cacheControl: '3600',
@@ -111,7 +97,6 @@ const ClientSettings = () => {
 
             if (error) throw error
 
-            // Obter URL pública
             const { data: { publicUrl } } = supabase.storage
                 .from('radio-logos')
                 .getPublicUrl(fileName)
@@ -119,7 +104,6 @@ const ClientSettings = () => {
             return publicUrl
         } catch (err) {
             console.error('Erro ao fazer upload:', err)
-            setMessage({ type: 'error', text: 'Erro ao fazer upload da logo' })
             return settings.logo_url
         } finally {
             setUploading(false)
@@ -131,52 +115,29 @@ const ClientSettings = () => {
         setMessage({ type: '', text: '' })
 
         try {
-            console.log('Salvando configurações:', settings)
+            const { data: profile } = await supabase.from('profiles').select('slug').eq('id', user.id).single()
+            if (!profile?.slug) throw new Error("Slug da rádio não encontrado")
 
-            // Upload da logo se houver arquivo novo
             let logoUrl = settings.logo_url
             if (logoFile) {
-                const uploadedUrl = await uploadLogo()
-                // Se upload falhar, continua sem logo
-                if (uploadedUrl && uploadedUrl !== settings.logo_url) {
-                    logoUrl = uploadedUrl
-                }
+                logoUrl = await uploadLogo()
             }
 
             const dataToSave = {
-                user_id: user.id,
-                slogan: settings.slogan || '',
-                logo_url: logoUrl || null,
-                primary_color: settings.primary_color || '#3f197f',
-                secondary_color: settings.secondary_color || '#ffffff'
+                nome: settings.nome,
+                logo_radio: logoUrl || null,
+                cor_padrao: settings.primary_color,
+                slug: profile.slug
             }
 
-            console.log('Dados a salvar:', dataToSave)
+            const { error } = await supabase
+                .from('app_radios')
+                .upsert(dataToSave, { onConflict: 'slug' })
 
-            // Salvar configurações usando upsert com onConflict
-            const { data, error } = await supabase
-                .from('radio_settings')
-                .upsert(dataToSave, {
-                    onConflict: 'user_id'
-                })
-                .select()
+            if (error) throw error
 
-            if (error) {
-                console.error('Erro do Supabase:', error)
-                throw error
-            }
-
-            console.log('Dados salvos:', data)
-
-            // Atualizar estado local com os dados salvos
-            const savedData = data && data.length > 0 ? data[0] : dataToSave
-            setSettings(savedData)
-            setLogoPreview(savedData.logo_url || '')
             setLogoFile(null)
-
             setMessage({ type: 'success', text: 'Configurações salvas com sucesso!' })
-
-            // Limpar mensagem após 3 segundos
             setTimeout(() => setMessage({ type: '', text: '' }), 3000)
 
         } catch (err) {
@@ -242,18 +203,18 @@ const ClientSettings = () => {
                             </div>
                         </div>
 
-                        {/* Slogan */}
+                        {/* Nome da Rádio */}
                         <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
                             <div className="flex items-center gap-2 mb-4">
                                 <Type className="w-5 h-5 text-purple-400" />
-                                <h2 className="text-lg font-bold text-white">Slogan</h2>
+                                <h2 className="text-lg font-bold text-white">Nome da Rádio</h2>
                             </div>
 
                             <input
                                 type="text"
-                                value={settings.slogan}
-                                onChange={(e) => setSettings({ ...settings, slogan: e.target.value })}
-                                placeholder="Ex: A melhor rádio da região"
+                                value={settings.nome}
+                                onChange={(e) => setSettings({ ...settings, nome: e.target.value })}
+                                placeholder="Ex: Rádio Top FM"
                                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
                             />
                         </div>

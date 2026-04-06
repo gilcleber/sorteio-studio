@@ -26,21 +26,26 @@ export const ThemeProvider = ({ children }) => {
 
     const fetchTheme = async () => {
         try {
-            const { data, error } = await supabase
-                .from('radio_settings')
-                .select('*')
-                .eq('user_id', user.id)
-                .single()
+            // Busca branding na nova tabela app_radios usando o slug do perfil
+            const { data: profile } = await supabase.from('profiles').select('slug').eq('id', user.id).single()
+            
+            if (profile?.slug) {
+                const { data, error } = await supabase
+                    .from('app_radios')
+                    .select('*')
+                    .eq('slug', profile.slug)
+                    .maybeSingle()
 
-            if (error && error.code !== 'PGRST116') throw error
+                if (error) throw error
 
-            if (data) {
-                setTheme({
-                    logo_url: data.logo_url || '',
-                    slogan: data.slogan || '',
-                    primary_color: data.primary_color || '#3f197f',
-                    secondary_color: data.secondary_color || '#ffffff'
-                })
+                if (data) {
+                    setTheme({
+                        logo_url: data.logo_radio || '',
+                        slogan: '', // app_radios não tem slogan por padrão ainda
+                        primary_color: data.cor_padrao || '#3f197f',
+                        secondary_color: '#ffffff'
+                    })
+                }
             }
         } catch (err) {
             console.error('Erro ao carregar tema:', err)
