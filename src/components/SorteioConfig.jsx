@@ -18,6 +18,11 @@ export default function SorteioConfig({ user }) {
    const [loading, setLoading] = useState(false)
    const [partCount, setPartCount] = useState(0)
 
+   const [dataInicio, setDataInicio] = useState("")
+   const [dataFim, setDataFim] = useState("")
+   const [filterStatus, setFilterStatus] = useState('todos')
+   const [ocultarConcluidos, setOcultarConcluidos] = useState(false)
+
    useEffect(() => {
        if (sorteioAtivo?.id) {
            supabase.from('app_participantes').select('*', { count: 'exact', head: true }).eq('evento_id', sorteioAtivo.id)
@@ -52,6 +57,10 @@ export default function SorteioConfig({ user }) {
        setTitulo(s.titulo || "")
        if (s.data_sorteio) setDataSorteio(s.data_sorteio.slice(0, 16))
        else setDataSorteio("")
+       if (s.data_inicio) setDataInicio(s.data_inicio.slice(0, 16))
+       else setDataInicio("")
+       if (s.data_fim) setDataFim(s.data_fim.slice(0, 16))
+       else setDataFim("")
        setTipo(s.modo || "unico")
        setQtd(s.qtd_ganhadores || 1)
        
@@ -64,6 +73,8 @@ export default function SorteioConfig({ user }) {
        setSorteioAtivo(null)
        setTitulo("Sorteio " + new Date().toLocaleDateString())
        setDataSorteio("")
+       setDataInicio("")
+       setDataFim("")
        setTipo("unico")
        setQtd(1)
        setPremioSel("")
@@ -112,6 +123,8 @@ export default function SorteioConfig({ user }) {
            slug: novoSlug,
            premio_id: pId,
            data_sorteio: dataSorteio ? new Date(dataSorteio).toISOString() : null,
+           data_inicio: dataInicio ? new Date(dataInicio).toISOString() : null,
+           data_fim: dataFim ? new Date(dataFim).toISOString() : null,
            modo: tipo,
            qtd_ganhadores: qtd,
            ativo: true
@@ -141,6 +154,39 @@ export default function SorteioConfig({ user }) {
        }
    }
 
+   const getStatusBadge = (s) => {
+        if (!s.ativo) return <span className="bg-gray-800 text-gray-500 border border-gray-700 px-2 py-1 rounded-full text-[10px] font-bold">🌑 OFF</span>;
+        const now = new Date();
+        const start = s.data_inicio ? new Date(s.data_inicio) : null;
+        const end = s.data_fim ? new Date(s.data_fim) : null;
+        if (start && now < start) return <span className="bg-yellow-900/30 text-yellow-400 border border-yellow-600/30 px-2 py-1 rounded-full text-[10px] font-bold">🟡 ESPERA</span>;
+        if (end && now > end) return <span className="bg-red-900/30 text-red-400 border border-red-600/30 px-2 py-1 rounded-full text-[10px] font-bold">🔴 CONCLUÍDO</span>;
+        return <span className="bg-green-900/30 text-green-400 border border-green-600/30 px-2 py-1 rounded-full text-[10px] font-bold">🟢 ON</span>;
+   }
+   
+   const isConcluido = (s) => {
+        if (!s.ativo) return true;
+        if (s.data_fim && new Date() > new Date(s.data_fim)) return true;
+        return false;
+   }
+   
+   const isEmAndamento = (s) => {
+        if (!s.ativo) return false;
+        const now = new Date();
+        const start = s.data_inicio ? new Date(s.data_inicio) : null;
+        const end = s.data_fim ? new Date(s.data_fim) : null;
+        if (start && now < start) return false;
+        if (end && now > end) return false;
+        return true;
+   }
+   
+   const sorteiosFiltrados = todosSorteios.filter(s => {
+        if (ocultarConcluidos && isConcluido(s)) return false;
+        if (filterStatus === 'em_andamento') return isEmAndamento(s);
+        if (filterStatus === 'concluidos') return isConcluido(s);
+        return true;
+   });
+
    const baseURL = "https://sorteio-studio.vercel.app"
 
    return (
@@ -168,9 +214,9 @@ export default function SorteioConfig({ user }) {
                             <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Título da Campanha</label>
                             <input value={titulo} onChange={e=>setTitulo(e.target.value)} type="text" className="w-full bg-black border border-gray-800 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" placeholder="Ex: Sorteio Mega Show" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Data / Hora</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Data / Hora do Sorteio</label>
                                 <input value={dataSorteio} onChange={e=>setDataSorteio(e.target.value)} type="datetime-local" className="w-full bg-black border border-gray-800 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" />
                             </div>
                             <div>
@@ -179,6 +225,16 @@ export default function SorteioConfig({ user }) {
                                     <option value="">-- Selecione --</option>
                                     {brindes.map(b => <option key={b.id} value={b.nome_brinde}>{b.nome_brinde}</option>)}
                                 </select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-800 pt-4 mt-2">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Abertura das Inscrições</label>
+                                <input value={dataInicio} onChange={e=>setDataInicio(e.target.value)} type="datetime-local" className="w-full bg-black border border-gray-800 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Término das Inscrições</label>
+                                <input value={dataFim} onChange={e=>setDataFim(e.target.value)} type="datetime-local" className="w-full bg-black border border-gray-800 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -277,7 +333,18 @@ export default function SorteioConfig({ user }) {
 
            {/* LISTA DE SORTEIOS - HISTÓRICO */}
            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-2xl mt-10">
-               <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">📚 Seus Sorteios</h3>
+               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                   <h3 className="text-lg font-black text-white flex items-center gap-2">📚 Seus Sorteios</h3>
+                   <div className="flex flex-wrap items-center gap-2 bg-black/40 p-1.5 rounded-lg border border-gray-800">
+                       <button onClick={() => setFilterStatus('em_andamento')} className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${filterStatus === 'em_andamento' ? 'bg-gray-700 text-white shadow-inner' : 'text-gray-400 hover:text-white'}`}>🟢 Em Andamento</button>
+                       <button onClick={() => setFilterStatus('todos')} className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${filterStatus === 'todos' ? 'bg-gray-700 text-white shadow-inner' : 'text-gray-400 hover:text-white'}`}>🟡 Todos</button>
+                       <button onClick={() => setFilterStatus('concluidos')} className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${filterStatus === 'concluidos' ? 'bg-gray-700 text-white shadow-inner' : 'text-gray-400 hover:text-white'}`}>🔴 Concluídos</button>
+                       <div className="w-px h-6 bg-gray-700 mx-1 hidden md:block"></div>
+                       <button onClick={() => setOcultarConcluidos(!ocultarConcluidos)} className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 transition-all ${ocultarConcluidos ? 'bg-gray-700 text-white shadow-inner' : 'text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700'}`}>
+                           {ocultarConcluidos && <Check className="w-3 h-3 text-green-400" />} Ocultar Concluídos
+                       </button>
+                   </div>
+               </div>
                <div className="overflow-x-auto">
                    <table className="w-full text-left">
                        <thead>
@@ -289,7 +356,7 @@ export default function SorteioConfig({ user }) {
                            </tr>
                        </thead>
                        <tbody className="divide-y divide-gray-800/50">
-                           {todosSorteios.map(s => (
+                           {sorteiosFiltrados.map(s => (
                                <tr key={s.id} className={`group ${s.ativo ? 'bg-indigo-900/10' : ''}`}>
                                    <td className="py-4">
                                        <p className="font-bold text-sm text-white">{s.titulo}</p>
@@ -299,9 +366,7 @@ export default function SorteioConfig({ user }) {
                                        {s.data_sorteio ? new Date(s.data_sorteio).toLocaleDateString() : '-'}
                                    </td>
                                    <td className="py-4">
-                                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${s.ativo ? 'bg-green-600/20 text-green-400 border-green-600/50' : 'bg-gray-800 text-gray-500 border-gray-700'}`}>
-                                           {s.ativo ? 'ATUAL' : 'INATIVO'}
-                                       </span>
+                                       {getStatusBadge(s)}
                                    </td>
                                    <td className="py-4 text-right pr-4">
                                        <div className="flex justify-end gap-2">
