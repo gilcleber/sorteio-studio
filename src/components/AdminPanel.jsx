@@ -3,7 +3,7 @@ import Importador from './Importador'
 import SorteioConfig from './SorteioConfig'
 import FormularioConfig from './FormularioConfig'
 import RelatorioPanel from './RelatorioPanel'
-import { Settings, Play, RefreshCw, Trophy, Clock, Zap, Upload, Users, List, MonitorPlay, Check, X, Volume2, Ban, Gauge, Shuffle, Gift, Trash2, AlertCircle, VolumeX, FilePlus, Cloud, RadioReceiver, PenTool, LogOut } from 'lucide-react'
+import { Settings, Play, RefreshCw, Trophy, Clock, Zap, Upload, Users, List, MonitorPlay, Check, X, Volume2, Ban, Gauge, Shuffle, Gift, Trash2, AlertCircle, VolumeX, FilePlus, Cloud, RadioReceiver, PenTool, LogOut, Copy } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import confetti from 'canvas-confetti'
@@ -569,37 +569,53 @@ const AdminPanel = ({ initialView = 'sorteio' }) => {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
                         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-gray-900 w-full max-w-lg rounded-2xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                             <div className="p-6 border-b border-gray-800 flex justify-between items-center sticky top-0 bg-gray-900 z-10">
-                                <h2 className="text-2xl font-bold text-white">Detalhes do Ganhador</h2>
+                                <h2 className="text-2xl font-bold text-white">
+                                    {ganhadorSelecionado.data_ganho || ganhadorSelecionado.dataHora ? "Dados do Ganhador" : "Ficha do Participante"}
+                                </h2>
                                 <button onClick={() => setIsModalOpen(false)} className="bg-gray-800 p-1 rounded-full text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
                             </div>
 
                             <div className="p-6 overflow-y-auto custom-scrollbar">
                                 <div className="space-y-4">
                                     <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700 text-center">
-                                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Ganhador(a)</p>
-                                        <p className="text-2xl text-white font-black">{ganhadorSelecionado.nome}</p>
-                                        {/* Tenta buscar o prêmio no objeto principal, depois em detalhes, depois cruza com histórico se for participante */}
-                                        <p className="text-purple-400 font-mono text-lg mt-1">
-                                            {ganhadorSelecionado.premio ||
-                                                ganhadorSelecionado.detalhes?.premio ||
-                                                historico.find(h => h.nome === ganhadorSelecionado.nome && h.telefone === ganhadorSelecionado.telefone)?.premio ||
-                                                "Prêmio não registrado"}
+                                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">
+                                            {ganhadorSelecionado.data_ganho || ganhadorSelecionado.dataHora ? "Ganhador(a)" : "Participante"}
                                         </p>
+                                        <p className="text-2xl text-white font-black">{ganhadorSelecionado.nome}</p>
+                                        {(ganhadorSelecionado.data_ganho || ganhadorSelecionado.dataHora) && (
+                                            <p className="text-purple-400 font-mono text-lg mt-1">
+                                                {ganhadorSelecionado.premio ||
+                                                    ganhadorSelecionado.detalhes?.premio ||
+                                                    historico.find(h => h.nome === ganhadorSelecionado.nome && h.telefone === ganhadorSelecionado.telefone)?.premio ||
+                                                    "Prêmio não registrado"}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div className="bg-gray-950 p-3 rounded border border-gray-800">
+                                        <div className="bg-gray-950 p-3 rounded border border-gray-800 relative group">
                                             <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Email</p>
-                                            <p className="text-sm text-white font-mono break-all">
+                                            <p className="text-sm text-white font-mono break-all pr-6">
                                                 {ganhadorSelecionado.email ||
                                                     ganhadorSelecionado.detalhes?.email ||
                                                     (ganhadorSelecionado.detalhes && Object.entries(ganhadorSelecionado.detalhes).find(([k]) => k.toLowerCase().includes('email'))?.[1]) ||
                                                     "Não informado"}
                                             </p>
+                                            <button onClick={() => navigator.clipboard.writeText(ganhadorSelecionado.email || ganhadorSelecionado.detalhes?.email || "")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><Copy className="w-4 h-4" /></button>
                                         </div>
-                                        <div className="bg-gray-950 p-3 rounded border border-gray-800">
+                                        <div className="bg-gray-950 p-3 rounded border border-gray-800 relative group">
                                             <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Telefone</p>
-                                            <p className="text-lg text-green-400 font-mono">{ganhadorSelecionado.telefone}</p>
+                                            <p className="text-lg text-green-400 font-mono pr-6">{ganhadorSelecionado.telefone}</p>
+                                            <button onClick={() => navigator.clipboard.writeText(ganhadorSelecionado.telefone)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><Copy className="w-4 h-4" /></button>
+                                        </div>
+                                        <div className="bg-gray-950 p-3 rounded border border-gray-800 relative group col-span-1 md:col-span-2">
+                                            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Instagram</p>
+                                            <p className="text-sm text-purple-400 font-mono break-all pr-6">
+                                                {ganhadorSelecionado.instagram || ganhadorSelecionado.detalhes?.instagram || "Não informado"}
+                                            </p>
+                                            {(ganhadorSelecionado.instagram || ganhadorSelecionado.detalhes?.instagram) && (
+                                                <button onClick={() => navigator.clipboard.writeText(ganhadorSelecionado.instagram || ganhadorSelecionado.detalhes?.instagram)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><Copy className="w-4 h-4" /></button>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="bg-gray-950 px-3 py-2 rounded border border-gray-800 flex justify-between items-center">
@@ -627,9 +643,9 @@ const AdminPanel = ({ initialView = 'sorteio' }) => {
 
                                     {/* SEÇÃO IMPORTANTE: DOCUMENTOS E ENDEREÇO (SOLICITAÇÃO URGENTE) */}
                                     <div className="grid grid-cols-2 gap-3 mt-4">
-                                        <div className="bg-gray-900/80 p-3 rounded border border-gray-700">
+                                        <div className="bg-gray-900/80 p-3 rounded border border-gray-700 relative group">
                                             <p className="text-[10px] text-yellow-500 uppercase font-bold mb-1">CPF / RG</p>
-                                            <p className="text-sm text-white font-mono leading-tight break-all">
+                                            <p className="text-sm text-white font-mono leading-tight break-all pr-6">
                                                 {ganhadorSelecionado.cpf ||
                                                     (ganhadorSelecionado.detalhes && Object.entries(ganhadorSelecionado.detalhes).find(([k]) => {
                                                         const kl = k.toLowerCase()
@@ -637,6 +653,7 @@ const AdminPanel = ({ initialView = 'sorteio' }) => {
                                                     })?.[1]) ||
                                                     "Não informado"}
                                             </p>
+                                            <button onClick={() => navigator.clipboard.writeText(ganhadorSelecionado.cpf || ganhadorSelecionado.detalhes?.cpf || "")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><Copy className="w-4 h-4" /></button>
                                         </div>
                                         <div className="bg-gray-900/80 p-3 rounded border border-gray-700">
                                             <p className="text-[10px] text-yellow-500 uppercase font-bold mb-1">Cidade / Local</p>
