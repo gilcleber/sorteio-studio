@@ -127,8 +127,13 @@ const ClientSettings = () => {
                 nome: settings.nome,
                 logo_radio: logoUrl || null,
                 cor_padrao: settings.primary_color,
-                slug: profile.slug,
-                owner: user.id
+                slug: profile.slug
+            }
+
+            // Apenas adicionamos o owner se ele for requisitado pelo novo padrão
+            // Isso evita erro 42703 (coluna inexistente) se a migração ainda não rodou.
+            if (user?.id) {
+                dataToSave.owner = user.id;
             }
 
             const { error } = await supabase
