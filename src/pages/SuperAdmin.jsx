@@ -36,10 +36,10 @@ const SuperAdmin = () => {
                 console.log("🛠️ Criando Rádio de Teste Automática...")
                 const pin = "1234"
                 const { error } = await supabase.rpc('create_radio_account', {
-                    email: 'teste@sorteiostudio.com',
-                    password: pin,
-                    name: 'Rádio Teste',
-                    user_slug: 'radio-teste'
+                    p_email: 'teste@sorteiostudio.com',
+                    p_pin: pin,
+                    p_nome: 'Rádio Teste',
+                    p_slug: 'radio-teste'
                 })
 
                 if (!error) {
@@ -80,10 +80,15 @@ const SuperAdmin = () => {
                 p_pin: newRadio.password,
                 p_nome: newRadio.nome,
                 p_slug: newRadio.slug,
-                p_owner: user.id
+                p_owner: user?.id // Garantindo owner do Master logado
             })
 
-            if (error) throw error
+            if (error) {
+                if (error.code === '42501') {
+                    throw new Error("Permissão negada (RLS). Tente logar novamente.")
+                }
+                throw error
+            }
 
             alert(`Rádio ${newRadio.nome} criada com sucesso!\nPIN Inicial: ${newRadio.password}`)
             setShowCreateModal(false)
@@ -140,7 +145,13 @@ const SuperAdmin = () => {
             setClients(formatted)
         } catch (error) {
             console.error("Erro ao buscar clientes:", error)
-            alert("Erro ao carregar lista: " + error.message)
+            if (error.code === '42501') {
+                alert("Aviso: Algumas rádios podem estar ocultas por falta de permissão (RLS).")
+            } else if (error.code === '42703') {
+                alert("Erro Técnico: Tentativa de busca de colunas inexistentes (ativo/arquivado). Contate o suporte.")
+            } else {
+                alert("Erro ao carregar lista: " + error.message)
+            }
         } finally {
             setLoading(false)
         }
