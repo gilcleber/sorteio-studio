@@ -117,7 +117,12 @@ const SuperAdmin = () => {
                 .select('*')
                 .order('created_at', { ascending: false })
 
-            if (profilesError) throw profilesError
+            if (profilesError) {
+                if (profilesError.message.includes('JWT')) {
+                    alert("Sua sessão expirou. Por favor, saia e entre novamente no sistema para recarregar os dados.")
+                }
+                throw profilesError
+            }
 
             const { data: licensesData, error: licensesError } = await supabase
                 .from('licenses')
