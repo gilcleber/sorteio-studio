@@ -57,7 +57,7 @@ const Sidebar = () => {
         {
             name: 'Gestão de Rádios',
             icon: Radio,
-            path: '/super-admin',
+            path: '/',
             show: true
         }
     ] : [

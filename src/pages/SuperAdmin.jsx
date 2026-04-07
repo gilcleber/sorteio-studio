@@ -80,7 +80,8 @@ const SuperAdmin = () => {
                 p_pin: newRadio.password,
                 p_nome: newRadio.nome,
                 p_slug: newRadio.slug,
-                p_owner: user?.id // Garantindo owner do Master logado
+                // p_owner removido aqui para não sobrescrever o Master. 
+                // O RPC vai buscar o UUID correto pelo email na nova versão.
             })
 
             if (error) {
