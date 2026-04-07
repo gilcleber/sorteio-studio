@@ -44,7 +44,26 @@ export default function PaginaParticipacao() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const { data: sortData, error } = await supabase.from('app_eventos').select('*').eq('slug', slug).eq('ativo', true).maybeSingle()
+            let { data: sortData, error } = await supabase.from('app_eventos').select('*').eq('slug', slug).eq('ativo', true).maybeSingle()
+            
+            // Se não achou evento pelo slug, tenta ver se o slug é de uma RÁDIO
+            if (!sortData) {
+                const { data: radioData } = await supabase.from('app_radios').select('slug').eq('slug', slug).maybeSingle()
+                if (radioData) {
+                    // Se achou a rádio, busca o evento ATIVO desta rádio
+                    const { data: activeEvent } = await supabase
+                        .from('app_eventos')
+                        .select('*')
+                        .eq('radio_id', slug)
+                        .eq('ativo', true)
+                        .maybeSingle()
+                    
+                    if (activeEvent) {
+                        sortData = activeEvent
+                    }
+                }
+            }
+
             if (error || !sortData) { 
                 setSorteioStatus('not_found')
                 setLoading(false); 
