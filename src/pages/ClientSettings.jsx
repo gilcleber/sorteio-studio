@@ -127,7 +127,8 @@ const ClientSettings = () => {
                 nome: settings.nome,
                 logo_radio: logoUrl || null,
                 cor_padrao: settings.primary_color,
-                slug: profile.slug
+                slug: profile.slug,
+                owner: user.id
             }
 
             const { error } = await supabase
