@@ -24,28 +24,50 @@ export const ThemeProvider = ({ children }) => {
         }
     }, [user])
 
-    const fetchTheme = async () => {
+    const fetchTheme = async (slugOrId = null) => {
         try {
-            // Busca branding na nova tabela app_radios usando o slug do perfil
-            const { data: profile } = await supabase.from('profiles').select('slug').eq('id', user.id).single()
+            let targetSlug = null;
+            let targetUserId = slugOrId || user?.id;
+
+            if (typeof slugOrId === 'string' && !slugOrId.includes('-')) {
+                // Provavelmente é um slug
+                targetSlug = slugOrId;
+            } else if (targetUserId) {
+                const { data: profile } = await supabase.from('profiles').select('slug').eq('id', targetUserId).single()
+                targetSlug = profile?.slug;
+            }
             
-            if (profile?.slug) {
+            if (targetSlug) {
                 const { data, error } = await supabase
                     .from('app_radios')
                     .select('*')
-                    .eq('slug', profile.slug)
+                    .eq('slug', targetSlug)
                     .maybeSingle()
 
                 if (error) throw error
 
                 if (data) {
                     setTheme({
-                        logo_url: data.logo_radio || '',
-                        slogan: '', // app_radios não tem slogan por padrão ainda
-                        primary_color: data.cor_padrao || '#3f197f',
+                        logo_url: data.logo_radio || '/static/default-logo.png',
+                        slogan: '', 
+                        primary_color: data.cor_padrao || '#1d244a',
+                        secondary_color: '#ffffff'
+                    })
+                } else {
+                    setTheme({
+                        logo_url: '/static/default-logo.png',
+                        slogan: '',
+                        primary_color: '#1d244a',
                         secondary_color: '#ffffff'
                     })
                 }
+            } else {
+                 setTheme({
+                    logo_url: '/static/default-logo.png',
+                    slogan: '',
+                    primary_color: '#1d244a',
+                    secondary_color: '#ffffff'
+                })
             }
         } catch (err) {
             console.error('Erro ao carregar tema:', err)
