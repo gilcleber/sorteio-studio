@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { Plus, Trash2, Image, Edit2, Upload, Loader2 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function PatrocinadorPanel({ radioSlug }) {
+  const { user } = useAuth()
   const [patrocinadores, setPatrocinadores] = useState([])
   const [nome, setNome] = useState("")
   const [logo, setLogo] = useState("")
@@ -55,7 +57,8 @@ export default function PatrocinadorPanel({ radioSlug }) {
           radio_id: radioSlug, 
           nome,
           logo_url: logo || null,
-          link: link || null
+          link: link || null,
+          owner: user?.id
       };
 
       try {

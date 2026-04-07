@@ -135,7 +135,8 @@ export default function SorteioConfig({ user }) {
            modo: tipo,
            qtd_ganhadores: qtd,
            ativo: true,
-           patrocinadores_ids: patSelecionados
+           patrocinadores_ids: patSelecionados,
+           owner: user.id
        }
        
        let dbError = null;
