@@ -65,7 +65,14 @@ const RadioLogin = () => {
 
             // FASE 3: Busca White Label Branding
             const { data: brand } = await supabase.from('app_radios').select('*').eq('slug', slug).maybeSingle()
-            if (brand) setRadioBrand(brand)
+            if (brand) {
+                setRadioBrand(brand)
+            } else {
+                setRadioBrand({
+                    cor_padrao: '#1d244a',
+                    logo_radio: '/static/default-logo.png'
+                })
+            }
             
         } catch (err) {
             setError('Erro ao carregar dados da rádio.')

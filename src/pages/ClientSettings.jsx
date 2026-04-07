@@ -135,7 +135,13 @@ const ClientSettings = () => {
                 .from('app_radios')
                 .upsert(dataToSave, { onConflict: 'slug' })
 
-            if (error) throw error
+            if (error) {
+                if (error.code === '42501') {
+                    alert("Erro de permissão (RLS): Você não tem permissão para editar esta rádio. Verifique se você é o dono da conta.")
+                } else {
+                    throw error
+                }
+            }
 
             setLogoFile(null)
             setMessage({ type: 'success', text: 'Configurações salvas com sucesso!' })
