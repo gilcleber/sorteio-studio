@@ -64,7 +64,7 @@ function App() {
               <Route path="/participar/:slug" element={<PaginaParticipacao />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/radio/:slug" element={<RadioLogin />} />
+              <Route path="/:slug/admin" element={<RadioLogin />} />
               <Route path="/trocar-pin" element={<ChangePinPage />} />
 
               {/* Rotas Protegidas (Logado - Rádio) */}

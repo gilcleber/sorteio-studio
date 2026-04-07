@@ -53,6 +53,15 @@ const SuperAdmin = () => {
         }
     }
 
+    const normalizeSlug = (input) => {
+        return input
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+    }
+
     const generatePin = () => Math.floor(1000 + Math.random() * 9000).toString()
 
     const openCreateModal = () => {
@@ -67,10 +76,11 @@ const SuperAdmin = () => {
         setCreating(true)
         try {
             const { data, error } = await supabase.rpc('create_radio_account', {
-                email: newRadio.email,
-                password: newRadio.password,
-                name: newRadio.nome,
-                user_slug: newRadio.slug
+                p_email: newRadio.email,
+                p_pin: newRadio.password,
+                p_nome: newRadio.nome,
+                p_slug: newRadio.slug,
+                p_owner: user.id
             })
 
             if (error) throw error
@@ -89,7 +99,7 @@ const SuperAdmin = () => {
 
     const handleNameChange = (e) => {
         const val = e.target.value
-        const slugAuto = val.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
+        const slugAuto = normalizeSlug(val)
         setNewRadio(prev => ({ ...prev, nome: val, slug: slugAuto }))
     }
 
@@ -361,7 +371,7 @@ const SuperAdmin = () => {
                                                 type="text"
                                                 defaultValue={client.slug || ''}
                                                 onBlur={(e) => {
-                                                    const newSlug = e.target.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')
+                                                    const newSlug = normalizeSlug(e.target.value)
                                                     if (newSlug !== client.slug && newSlug) {
                                                         updateSlug(client.id, newSlug)
                                                     }
@@ -405,7 +415,7 @@ const SuperAdmin = () => {
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             e.stopPropagation();
-                                                            window.open(`${window.location.origin}/#/radio/${client.slug}`, '_blank')
+                                                            window.open(`${window.location.origin}/#/${client.slug}/admin`, '_blank')
                                                         }}
                                                     >
                                                         Painel Gestor ↗

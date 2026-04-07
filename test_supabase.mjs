@@ -5,17 +5,14 @@ const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZi
 const supabase = createClient(url, key);
 
 async function run() {
-  console.log("Testando busca por slug...");
-  const { data, error } = await supabase.from('app_historico').select('*').eq('slug', 'meu-grande-sorteio-8417').maybeSingle();
-  console.log("-------------------");
-  console.log("Resultado por Slug:");
-  console.log("DATA:", data);
-  console.log("ERROR:", error);
+  console.log("Verificando app_radios...");
+  const { data: radioData, error: radioError } = await supabase.from('app_radios').select('*').limit(1);
+  console.log("DATA app_radios:", radioData);
+  console.log("ERROR app_radios:", radioError);
 
-  console.log("\nListando primeiro item da tabela app_historico...");
-  const { data: all, error: errAll } = await supabase.from('app_historico').select('*').limit(2);
-  console.log("-------------------");
-  console.log("All DATA:", all);
-  console.log("All ERROR:", errAll);
+  console.log("\nVerificando radio_settings...");
+  const { data: settingsData, error: settingsError } = await supabase.from('radio_settings').select('*').limit(1);
+  console.log("DATA radio_settings:", settingsData);
+  console.log("ERROR radio_settings:", settingsError);
 }
 run();
