@@ -104,7 +104,7 @@ const ClientSettings = () => {
             return publicUrl
         } catch (err) {
             console.error('Erro ao fazer upload:', err)
-            return settings.logo_url
+            throw new Error(`Falha no upload da imagem: ${err.message}`)
         } finally {
             setUploading(false)
         }
@@ -121,6 +121,8 @@ const ClientSettings = () => {
             let logoUrl = settings.logo_url
             if (logoFile) {
                 logoUrl = await uploadLogo()
+                // Atualizar o estado local para evitar sobrescrever se o usuário salvar novamente sem recarregar a página
+                setSettings(prev => ({ ...prev, logo_url: logoUrl }))
             }
 
             const dataToSave = {
