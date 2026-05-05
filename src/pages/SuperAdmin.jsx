@@ -303,7 +303,7 @@ const SuperAdmin = () => {
                     </div>
                     <div className="flex gap-4">
                         <button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-purple-900/20">
-                            <Users className="w-5 h-5" /> Nova Rádio
+                            <Users className="w-5 h-5" /> Novo Cliente
                         </button>
                         <div className="relative">
                             <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
@@ -326,19 +326,18 @@ const SuperAdmin = () => {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                         <div className="bg-gray-900 border border-gray-700 p-8 rounded-2xl w-full max-w-md shadow-2xl relative">
                             <button onClick={() => setShowCreateModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white"><XCircle /></button>
-                            <h2 className="text-2xl font-bold text-white mb-6">Cadastrar Nova Rádio</h2>
+                            <h2 className="text-2xl font-bold text-white mb-6">Cadastrar Novo Cliente</h2>
 
                             <form onSubmit={handleCreateRadio} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Nome da Rádio</label>
+                                    <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Nome da Empresa</label>
                                     <input autoFocus type="text" value={newRadio.nome} onChange={handleNameChange} className="w-full bg-gray-800 border-gray-700 rounded p-3 text-white focus:border-purple-500 outline-none" placeholder="Ex: Rádio Top FM" />
                                 </div>
 
                                 <div>
                                     <label className="block text-xs uppercase text-gray-500 font-bold mb-1">Slug (Link)</label>
                                     <div className="flex items-center bg-gray-800 border border-gray-700 rounded px-3">
-                                        <span className="text-gray-500 text-sm">/radio/</span>
-                                        <input type="text" value={newRadio.slug} onChange={e => setNewRadio({ ...newRadio, slug: e.target.value })} className="w-full bg-transparent p-3 text-white focus:outline-none" placeholder="radio-top" />
+                                        <input type="text" value={newRadio.slug} onChange={e => setNewRadio({ ...newRadio, slug: e.target.value })} className="w-full bg-transparent p-3 text-white focus:outline-none" placeholder="link-da-empresa" />
                                     </div>
                                 </div>
 
@@ -356,7 +355,7 @@ const SuperAdmin = () => {
                                 </div>
 
                                 <button disabled={creating} type="submit" className="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-xl font-bold text-white shadow-lg mt-4 flex justify-center">
-                                    {creating ? <Loader2 className="animate-spin" /> : "Criar Rádio"}
+                                    {creating ? <Loader2 className="animate-spin" /> : "Criar Conta"}
                                 </button>
                             </form>
                         </div>
