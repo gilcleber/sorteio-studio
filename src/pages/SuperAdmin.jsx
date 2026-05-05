@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
+import { createClient } from '@supabase/supabase-js'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { Users, Search, CheckCircle, XCircle, Clock, ShieldAlert, ArrowLeft, RefreshCw, Calendar, Loader2 } from 'lucide-react'
@@ -75,13 +76,30 @@ const SuperAdmin = () => {
 
         setCreating(true)
         try {
+            // 1. Criar o usuário Auth em um cliente secundário para não deslogar o Master
+            const secSupabase = createClient(
+                import.meta.env.VITE_SUPABASE_URL,
+                import.meta.env.VITE_SUPABASE_ANON_KEY,
+                { auth: { persistSession: false, autoRefreshToken: false } }
+            )
+            const { data: authData, error: authError } = await secSupabase.auth.signUp({
+                email: newRadio.email,
+                password: newRadio.password
+            })
+
+            if (authError && !authError.message.includes('already registered') && !authError.message.includes('já está registrado')) {
+                throw authError
+            }
+
+            // Aguardar um pouco para garantir que a trigger do Supabase criou o profile
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // 2. Chamar a RPC para configurar os dados da rádio e perfil
             const { data, error } = await supabase.rpc('create_radio_account', {
                 p_email: newRadio.email,
                 p_pin: newRadio.password,
                 p_nome: newRadio.nome,
                 p_slug: newRadio.slug,
-                // p_owner removido aqui para não sobrescrever o Master. 
-                // O RPC vai buscar o UUID correto pelo email na nova versão.
             })
 
             if (error) {
@@ -89,6 +107,11 @@ const SuperAdmin = () => {
                     throw new Error("Permissão negada (RLS). Tente logar novamente.")
                 }
                 throw error
+            }
+
+            // Verificar o status retornado pela RPC (se houver erro lógico)
+            if (data && data.status === 'error') {
+                throw new Error(data.message)
             }
 
             alert(`Rádio ${newRadio.nome} criada com sucesso!\nPIN Inicial: ${newRadio.password}`)

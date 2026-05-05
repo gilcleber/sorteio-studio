@@ -42,25 +42,42 @@ export default function PaginaParticipacao() {
     const [showInstaModal, setShowInstaModal] = useState(false)
     const [pendingPayload, setPendingPayload] = useState(null)
 
+    // Radio Landing State
+    const [isRadioLanding, setIsRadioLanding] = useState(false)
+    const [radioEvents, setRadioEvents] = useState([])
+
     useEffect(() => {
         const fetchData = async () => {
             let { data: sortData, error } = await supabase.from('app_eventos').select('*').eq('slug', slug).eq('ativo', true).maybeSingle()
             
             // Se não achou evento pelo slug, tenta ver se o slug é de uma RÁDIO
             if (!sortData) {
-                const { data: radioData } = await supabase.from('app_radios').select('slug').eq('slug', slug).maybeSingle()
+                const { data: radioData } = await supabase.from('app_radios').select('*').eq('slug', slug).maybeSingle()
                 if (radioData) {
-                    // Se achou a rádio, busca o evento ATIVO desta rádio
-                    const { data: activeEvent } = await supabase
+                    setIsRadioLanding(true);
+                    setRadioBranding(radioData);
+                    
+                    // Buscar eventos desta rádio
+                    const { data: activeEvents } = await supabase
                         .from('app_eventos')
                         .select('*')
                         .eq('radio_id', slug)
-                        .eq('ativo', true)
-                        .maybeSingle()
+                        .order('created_at', { ascending: false })
                     
-                    if (activeEvent) {
-                        sortData = activeEvent
+                    if (activeEvents && activeEvents.length > 0) {
+                       const premiosIds = activeEvents.map(e => e.premio_id).filter(Boolean);
+                       let brindesMap = {};
+                       if (premiosIds.length > 0) {
+                           const {data: brindesData} = await supabase.from('app_brindes').select('*').in('id', premiosIds);
+                           if(brindesData) {
+                               brindesData.forEach(b => brindesMap[b.id] = b);
+                           }
+                       }
+                       const eventsWithBrindes = activeEvents.map(e => ({...e, brinde: brindesMap[e.premio_id]}));
+                       setRadioEvents(eventsWithBrindes);
                     }
+                    setLoading(false);
+                    return;
                 }
             }
 
@@ -156,7 +173,86 @@ export default function PaginaParticipacao() {
         }
     }
 
-    if (loading) return <div className="min-h-screen bg-gray-950 flex items-center justify-center font-mono text-purple-500 animate-pulse">Sincronizando Sorteio...</div>
+    if (loading) return <div className="min-h-screen bg-gray-950 flex items-center justify-center font-mono text-purple-500 animate-pulse">Sincronizando...</div>
+    
+    if (isRadioLanding) {
+        const corTema = radioBranding?.cor_padrao || '#6b21a8'
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center p-4 md:p-8 font-sans">
+                <motion.div 
+                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} 
+                   className="bg-white max-w-2xl w-full rounded-[2rem] shadow-2xl overflow-hidden border border-gray-100 flex flex-col"
+                >
+                    <div className="w-full p-10 text-center relative overflow-hidden flex flex-col items-center justify-center min-h-[220px]" style={{ backgroundColor: corTema, backgroundImage: `linear-gradient(135deg, ${corTema} 0%, #00000040 100%)` }}>
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
+                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl -ml-16 -mb-16"></div>
+                        {radioBranding?.logo_radio ? (
+                            <img src={radioBranding.logo_radio} alt={radioBranding.nome} className="h-24 w-auto object-contain drop-shadow-xl mb-4 relative z-10" />
+                        ) : (
+                            <Trophy className="w-16 h-16 text-yellow-300 drop-shadow-xl mb-4 relative z-10" />
+                        )}
+                        <h1 className="text-white font-black text-3xl drop-shadow-md leading-tight mt-2 relative z-10">{radioBranding.nome || "Portal de Sorteios"}</h1>
+                        <p className="text-white/80 mt-2 font-medium relative z-10">Sorteios Oficiais</p>
+                    </div>
+
+                    <div className="p-6 md:p-8 grow bg-gray-50">
+                        <h2 className="text-xl font-black text-gray-800 mb-6 flex items-center gap-2">
+                            <Gift className="w-6 h-6" style={{ color: corTema }} /> Sorteios Disponíveis
+                        </h2>
+                        
+                        {radioEvents.length === 0 ? (
+                            <div className="text-center py-10 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500 font-medium">Nenhum sorteio disponível no momento.</p>
+                                <p className="text-sm text-gray-400 mt-1">Fique ligado em nossa programação!</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {radioEvents.map(evento => {
+                                    const isEmEspera = evento.data_inicio && new Date() < new Date(evento.data_inicio);
+                                    const isEncerrado = !evento.ativo || (evento.data_fim && new Date() > new Date(evento.data_fim));
+                                    
+                                    return (
+                                        <div key={evento.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                                            {evento.brinde?.imagem_url ? (
+                                                <div className="h-40 w-full bg-gray-200 relative">
+                                                    <img src={evento.brinde.imagem_url} alt={evento.titulo} className="w-full h-full object-cover" />
+                                                    {isEncerrado && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="bg-red-500 text-white font-black tracking-widest px-4 py-1.5 rounded-full text-xs shadow-lg">ENCERRADO</span></div>}
+                                                    {isEmEspera && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="bg-blue-500 text-white font-black tracking-widest px-4 py-1.5 rounded-full text-xs shadow-lg">EM BREVE</span></div>}
+                                                </div>
+                                            ) : (
+                                                <div className="h-32 w-full flex flex-col items-center justify-center relative" style={{ backgroundColor: corTema + '20' }}>
+                                                    <Trophy className="w-10 h-10 mb-2" style={{ color: corTema }} />
+                                                    {isEncerrado && <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center"><span className="bg-red-500 text-white font-black tracking-widest px-4 py-1.5 rounded-full text-xs shadow-lg">ENCERRADO</span></div>}
+                                                    {isEmEspera && <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center"><span className="bg-blue-500 text-white font-black tracking-widest px-4 py-1.5 rounded-full text-xs shadow-lg">EM BREVE</span></div>}
+                                                </div>
+                                            )}
+                                            <div className="p-5 flex flex-col grow">
+                                                <h3 className="font-bold text-gray-800 text-lg leading-tight mb-2 line-clamp-2">{evento.titulo || "Sorteio Especial"}</h3>
+                                                {evento.brinde?.nome_brinde && <p className="text-sm text-gray-500 mb-4 line-clamp-1">{evento.brinde.nome_brinde}</p>}
+                                                
+                                                <div className="mt-auto pt-4">
+                                                    <button 
+                                                        onClick={() => window.location.href = `/#/participar/${evento.slug}`}
+                                                        className={`w-full py-3.5 rounded-xl font-bold transition-all flex justify-center items-center gap-2 ${isEncerrado ? 'bg-gray-100 text-gray-400 border border-gray-200' : 'text-white hover:scale-[1.02] shadow-md'}`}
+                                                        style={{ backgroundColor: isEncerrado ? undefined : corTema }}
+                                                    >
+                                                        {isEncerrado ? 'Ver Resultado' : isEmEspera ? 'Ver Detalhes' : 'Quero Participar'}
+                                                        <ArrowRight className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </motion.div>
+            </div>
+        )
+    }
+
     if (sorteioStatus === 'not_found') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-red-500 font-bold px-4 text-center"><Trophy className="w-16 h-16 mb-4 text-gray-800" /> Ops! Este Sorteio não foi encontrado ou o link é inválido. 🚫</div>
     if (sorteioStatus === 'encerrado') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-yellow-500 font-bold px-4 text-center"><CheckCircle2 className="w-16 h-16 mb-4 text-yellow-600" /> Este Sorteio já foi encerrado! 🎉</div>
     if (sorteioStatus === 'em_espera') return <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-purple-500 font-bold px-4 text-center"><Clock className="w-16 h-16 mb-4 text-purple-800" /> As inscrições para este Sorteio ainda não foram abertas. Volte no horário marcado! ⏰</div>
